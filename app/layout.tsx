@@ -21,7 +21,11 @@ export default function RootLayout({
 
   return (
     <html lang="fr">
-      <head><title>LYJY Atelier Bijoux</title><meta name="description" content="Bijoux artisanaux et créations uniques faits main par LYJY Atelier." /><link rel="icon" href="/icon.png" /></head>
+      <head>
+        <title>LYJY Atelier Bijoux</title>
+        <meta name="description" content="Bijoux artisanaux et créations uniques faits main par LYJY Atelier." />
+        <link rel="icon" href="/favicon.ico" />
+      </head>
       <body className={`min-h-screen font-sans transition-colors duration-500 ${
         isDayMode ? "bg-[#F9F8F6] text-stone-900" : "bg-black text-stone-200"
       }`}>
