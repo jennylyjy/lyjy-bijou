@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+.hero-readable * { text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95); }
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

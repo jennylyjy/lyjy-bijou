@@ -1,0 +1,3 @@
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+export async function GET(request: Request) { const secret = process.env.STRIPE_SECRET_KEY; const id = new URL(request.url).searchParams.get("session_id"); if (!secret || !id || !id.startsWith("cs_")) return NextResponse.json({ error: "Session invalide" }, { status: 400 }); try { const session = await new Stripe(secret).checkout.sessions.retrieve(id); return NextResponse.json({ paid: session.payment_status === "paid", amount: session.amount_total ? session.amount_total / 100 : 0, email: session.customer_details?.email || "" }); } catch { return NextResponse.json({ error: "Session introuvable" }, { status: 404 }); } }
