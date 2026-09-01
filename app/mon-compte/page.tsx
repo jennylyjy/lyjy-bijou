@@ -158,6 +158,7 @@ export default function AccountPage() {
       localStorage.removeItem("lyjy_current_user");
       router.push("/");
     } catch {
+      alert("La suppression n’a pas abouti. Vérifiez que le dernier déploiement Vercel est actif et que les variables FIREBASE_ADMIN sont renseignées.");
       setSuccessMessage("La suppression a échoué. Reconnectez-vous puis réessayez.");
       setTimeout(() => setSuccessMessage(""), 4000);
     } finally {
