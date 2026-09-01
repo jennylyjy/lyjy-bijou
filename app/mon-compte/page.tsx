@@ -145,8 +145,9 @@ export default function AccountPage() {
     setIsDeletingAccount(true);
     try {
       if (!auth.currentUser) throw new Error("session");
+      if (auth.currentUser.email?.toLowerCase() !== String(currentUser.email).toLowerCase()) throw new Error("session-mismatch");
       const token = await auth.currentUser.getIdToken(true);
-      const response = await fetch("/api/account/delete", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch("/api/account/delete", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ email: currentUser.email }) });
       if (!response.ok) throw new Error("delete-failed");
       await fetch("/api/account-deleted", {
         method: "POST",
