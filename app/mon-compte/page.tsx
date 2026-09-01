@@ -20,7 +20,6 @@ import { useCartStore } from "@/store/useCartStore";
 import { db } from "../../lib/firebase";
 import { auth } from "../../lib/firebase";
 import { collection, query, where, onSnapshot, deleteDoc, doc } from "firebase/firestore";
-import { deleteUser } from "firebase/auth";
 import VirtualAdventCalendar from "@/components/VirtualAdventCalendar";
 
 const orderTimestamp = (order: any) => {
@@ -144,8 +143,11 @@ export default function AccountPage() {
     if (!window.confirm("Cette action est définitive. Confirmer la suppression du compte ?")) return;
     setIsDeletingAccount(true);
     try {
+      if (!auth.currentUser) throw new Error("session");
+      const token = await auth.currentUser.getIdToken(true);
+      const response = await fetch("/api/account/delete", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error("delete-failed");
       if (currentUser.uid) await deleteDoc(doc(db, "users", currentUser.uid));
-      if (auth.currentUser) await deleteUser(auth.currentUser);
       await fetch("/api/account-deleted", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -155,7 +157,7 @@ export default function AccountPage() {
       localStorage.removeItem("lyjy_current_user");
       router.push("/");
     } catch {
-      setSuccessMessage("Reconnectez-vous avant de supprimer votre compte, puis réessayez.");
+      setSuccessMessage("La suppression a échoué. Reconnectez-vous puis réessayez.");
       setTimeout(() => setSuccessMessage(""), 4000);
     } finally {
       setIsDeletingAccount(false);
