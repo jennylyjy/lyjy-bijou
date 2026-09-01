@@ -19,6 +19,7 @@ import { useThemeStore } from "../../store/useThemeStore";
 import { useCartStore } from "@/store/useCartStore";
 import { db } from "../../lib/firebase";
 import { auth } from "../../lib/firebase";
+import { signOut } from "firebase/auth";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import VirtualAdventCalendar from "@/components/VirtualAdventCalendar";
 
@@ -152,6 +153,7 @@ export default function AccountPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: currentUser.email }),
       }).catch(() => undefined);
+      await signOut(auth).catch(() => undefined);
       resetCart();
       localStorage.removeItem("lyjy_current_user");
       router.push("/");
