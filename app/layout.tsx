@@ -5,6 +5,7 @@ import { useThemeStore } from "@/store/useThemeStore";
 import { useCartStore } from "@/store/useCartStore";
 import "./globals.css";
 import Link from "next/link";
+import GlobalAlert from "@/components/GlobalAlert";
 
 export default function RootLayout({
   children,
@@ -30,6 +31,7 @@ export default function RootLayout({
         isDayMode ? "bg-[#F9F8F6] text-stone-900" : "bg-black text-stone-200"
       }`}>
         {children}
+        <GlobalAlert />
         <footer className="fixed bottom-0 left-0 right-0 z-20 flex justify-center gap-6 py-2 bg-black/90 text-[10px] uppercase tracking-widest text-stone-400"><Link href="/contact">Contact</Link><Link href="/cgv-cgu">CGV-CGU</Link></footer>
       </body>
     </html>
