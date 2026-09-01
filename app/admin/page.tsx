@@ -284,6 +284,15 @@ function AdminPage() {
   const handleDeleteUser = async (id: string) => {
     if (confirm("Supprimer cet utilisateur de la base ?")) {
       try {
+        if (currentUser) {
+          const token = await currentUser.getIdToken();
+          const response = await fetch("/api/admin/delete-user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ uid: id }),
+          });
+          if (!response.ok) throw new Error("auth-delete-failed");
+        }
         await deleteDoc(doc(db, "users", id));
         setSuccessMessage("Utilisateur supprimé.");
         setTimeout(() => setSuccessMessage(""), 3000);
