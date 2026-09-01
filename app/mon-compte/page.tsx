@@ -146,6 +146,11 @@ export default function AccountPage() {
     try {
       if (currentUser.uid) await deleteDoc(doc(db, "users", currentUser.uid));
       if (auth.currentUser) await deleteUser(auth.currentUser);
+      await fetch("/api/account-deleted", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: currentUser.email }),
+      }).catch(() => undefined);
       resetCart();
       localStorage.removeItem("lyjy_current_user");
       router.push("/");
