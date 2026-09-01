@@ -114,6 +114,7 @@ function AdminPage() {
   const [virtualAdventStartDate, setVirtualAdventStartDate] = useState("2026-12-01");
   const [virtualAdventEndDate, setVirtualAdventEndDate] = useState("2026-12-24");
   const [isSubmittingVirtualAdvent, setIsSubmittingVirtualAdvent] = useState(false);
+  const [virtualAdventCalendars, setVirtualAdventCalendars] = useState<any[]>([]);
   const [virtualAdventRewards, setVirtualAdventRewards] = useState(
     Array.from({ length: 24 }, (_, index) => ({
       day: index + 1,
@@ -191,6 +192,10 @@ function AdminPage() {
       setGiftCards(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    const unsubVirtualAdvents = onSnapshot(collection(db, "virtualAdventCalendars"), (snapshot) => {
+      setVirtualAdventCalendars(snapshot.docs.map(calendarDoc => ({ id: calendarDoc.id, ...calendarDoc.data() })));
+    });
+
     const unsubCatalogTaxonomy = onSnapshot(doc(db, "settings", "catalogTaxonomy"), snapshot => {
       if (!snapshot.exists()) return;
       const data = snapshot.data();
@@ -225,9 +230,21 @@ function AdminPage() {
       unsubUsers();
       unsubCoupons();
       unsubGiftCards();
+      unsubVirtualAdvents();
       unsubCatalogTaxonomy();
     };
   }, [currentUser, adminAllowed]);
+
+  const handleDeleteVirtualAdvent = async (id: string) => {
+    if (!window.confirm("Supprimer ce calendrier virtuel ? Il ne sera plus visible par les clients.")) return;
+    try {
+      await deleteDoc(doc(db, "virtualAdventCalendars", id));
+      setSuccessMessage("Calendrier virtuel supprimé.");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch {
+      alert("Impossible de supprimer le calendrier virtuel.");
+    }
+  };
 
   const totalRevenue = orders
     .filter(o => o.status !== "cancelled" && (!statsSince || new Date(o.createdAt || o.date || 0).getTime() >= statsSince))
@@ -1465,6 +1482,23 @@ function AdminPage() {
                   Chaque case active crée automatiquement un code promo utilisable dans le panier.
                 </p>
               </div>
+
+              {virtualAdventCalendars.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs uppercase tracking-widest text-stone-500">Calendriers créés</h3>
+                  {virtualAdventCalendars.map((calendar) => (
+                    <div key={calendar.id} className="flex items-center justify-between border border-stone-800 p-3">
+                      <div>
+                        <p className="text-sm text-[#C4A77D]">{calendar.title}</p>
+                        <p className="text-[10px] text-stone-500">{calendar.startDate} → {calendar.endDate}</p>
+                      </div>
+                      <button type="button" onClick={() => handleDeleteVirtualAdvent(calendar.id)} className="text-red-400 hover:text-red-300" aria-label="Supprimer le calendrier">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <form onSubmit={handleCreateVirtualAdvent} className="space-y-6 text-xs tracking-wider">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
