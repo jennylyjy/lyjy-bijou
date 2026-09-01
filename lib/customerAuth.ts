@@ -13,6 +13,7 @@ export interface CustomerProfile {
     postalCode?: string;
     city?: string;
   };
+  welcomeEmailSent?: boolean;
 }
 
 interface LegacyUser extends Omit<CustomerProfile, "uid"> {
@@ -25,6 +26,7 @@ const normalizeProfile = (uid: string, data: Partial<LegacyUser>, email: string)
   email: email.trim().toLowerCase(),
   firstName: String(data.firstName || ""),
   lastName: String(data.lastName || ""),
+  ...(data.welcomeEmailSent ? { welcomeEmailSent: true } : {}),
   ...(data.addressDetails ? { addressDetails: data.addressDetails } : {}),
 });
 
@@ -67,6 +69,11 @@ export async function loginCustomer(email: string, password: string) {
     const snapshot = await getDoc(doc(db, "users", credential.user.uid));
     const profile = normalizeProfile(credential.user.uid, snapshot.exists() ? snapshot.data() : {}, credential.user.email || normalizedEmail);
     if (!snapshot.exists()) await setDoc(doc(db, "users", credential.user.uid), profile, { merge: true });
+    if (!profile.welcomeEmailSent) {
+      await fetch("/api/welcome-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: profile.email, firstName: profile.firstName }) }).catch(() => undefined);
+      profile.welcomeEmailSent = true;
+      await setDoc(doc(db, "users", credential.user.uid), { welcomeEmailSent: true }, { merge: true });
+    }
     storeSafeProfile(profile);
     removeMigratedLegacyUser(normalizedEmail);
     return profile;
