@@ -19,7 +19,7 @@ import { useThemeStore } from "../../store/useThemeStore";
 import { useCartStore } from "@/store/useCartStore";
 import { db } from "../../lib/firebase";
 import { auth } from "../../lib/firebase";
-import { collection, query, where, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import VirtualAdventCalendar from "@/components/VirtualAdventCalendar";
 
 const orderTimestamp = (order: any) => {
@@ -147,7 +147,6 @@ export default function AccountPage() {
       const token = await auth.currentUser.getIdToken(true);
       const response = await fetch("/api/account/delete", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) throw new Error("delete-failed");
-      if (currentUser.uid) await deleteDoc(doc(db, "users", currentUser.uid));
       await fetch("/api/account-deleted", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
