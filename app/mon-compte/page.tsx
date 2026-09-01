@@ -18,7 +18,9 @@ import {
 import { useThemeStore } from "../../store/useThemeStore";
 import { useCartStore } from "@/store/useCartStore";
 import { db } from "../../lib/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { auth } from "../../lib/firebase";
+import { collection, query, where, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { deleteUser } from "firebase/auth";
 import VirtualAdventCalendar from "@/components/VirtualAdventCalendar";
 
 const orderTimestamp = (order: any) => {
@@ -51,6 +53,9 @@ export default function AccountPage() {
 
   const [queryInput, setQueryInput] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     const userJson = localStorage.getItem("lyjy_current_user");
@@ -131,6 +136,25 @@ export default function AccountPage() {
     resetCart();
     localStorage.removeItem("lyjy_current_user");
     router.push("/");
+  };
+
+  const handleDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || deleteConfirmation !== "SUPPRIMER" || deleteEmail.trim().toLowerCase() !== String(currentUser.email).toLowerCase()) return;
+    if (!window.confirm("Cette action est définitive. Confirmer la suppression du compte ?")) return;
+    setIsDeletingAccount(true);
+    try {
+      if (currentUser.uid) await deleteDoc(doc(db, "users", currentUser.uid));
+      if (auth.currentUser) await deleteUser(auth.currentUser);
+      resetCart();
+      localStorage.removeItem("lyjy_current_user");
+      router.push("/");
+    } catch {
+      setSuccessMessage("Reconnectez-vous avant de supprimer votre compte, puis réessayez.");
+      setTimeout(() => setSuccessMessage(""), 4000);
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   const handleSaveAddress = (e: React.FormEvent) => {
@@ -670,6 +694,16 @@ export default function AccountPage() {
                   )}
                 </div>
               </div>
+
+              <form onSubmit={handleDeleteAccount} className="mt-8 border border-red-500/30 p-4 space-y-3">
+                <h3 className="text-sm uppercase tracking-widest text-red-400">Supprimer mon compte</h3>
+                <p className="text-xs text-stone-500">Cette action est définitive. Écrivez SUPPRIMER et confirmez votre adresse e-mail.</p>
+                <input value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} placeholder="SUPPRIMER" className="w-full border border-stone-800 bg-black p-3 text-sm" required />
+                <input type="email" value={deleteEmail} onChange={(e) => setDeleteEmail(e.target.value)} placeholder="Votre adresse e-mail" className="w-full border border-stone-800 bg-black p-3 text-sm" required />
+                <button type="submit" disabled={isDeletingAccount || deleteConfirmation !== "SUPPRIMER" || deleteEmail.trim().toLowerCase() !== String(currentUser.email).toLowerCase()} className="border border-red-500 px-4 py-2 text-xs uppercase tracking-widest text-red-400 disabled:opacity-40">
+                  {isDeletingAccount ? "Suppression..." : "Supprimer définitivement"}
+                </button>
+              </form>
             </div>
           )}
         </div>
