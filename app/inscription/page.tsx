@@ -60,7 +60,7 @@ export default function RegisterPage() {
       }, formData.password);
       useCartStore.getState().syncCart();
       alert("Un e-mail de validation vient de vous être envoyé. Validez votre adresse pour pouvoir vous reconnecter.");
-      router.push("/mon-compte");
+      router.push("/connexion");
     } catch {
       setError("Impossible de créer le compte. Cette adresse e-mail est peut-être déjà utilisée.");
     } finally {

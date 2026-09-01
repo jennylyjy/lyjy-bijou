@@ -55,6 +55,7 @@ export async function registerCustomer(data: Omit<CustomerProfile, "uid">, passw
   const profile = normalizeProfile(credential.user.uid, data, credential.user.email || data.email);
   await setDoc(doc(db, "users", credential.user.uid), { ...profile, createdAt: new Date().toISOString() });
   storeSafeProfile(profile);
+  await signOut(auth);
   return profile;
 }
 
@@ -62,6 +63,7 @@ export async function loginCustomer(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
   try {
     const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+    await credential.user.reload();
     if (!credential.user.emailVerified) {
       await sendEmailVerification(credential.user).catch(() => undefined);
       throw new Error("EMAIL_NOT_VERIFIED");
