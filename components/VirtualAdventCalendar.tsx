@@ -132,9 +132,12 @@ export default function VirtualAdventCalendar({ userEmail, isDayMode }: { userEm
   ), [userEmail]);
 
   const today = localDateKey();
-  const calendar = [...calendars].sort((a, b) => b.startDate.localeCompare(a.startDate)).find(item =>
-    today >= item.startDate && today <= item.endDate
-  ) || [...calendars].sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+  // N'afficher qu'un calendrier réellement en cours. L'ancien comportement
+  // reprenait le dernier calendrier même après sa date de fin, ce qui le
+  // rendait encore visible côté client alors qu'il n'était plus disponible.
+  const calendar = [...calendars]
+    .sort((a, b) => b.startDate.localeCompare(a.startDate))
+    .find(item => item.isActive && today >= item.startDate && today <= item.endDate);
 
   if (!calendar) {
     return <p className="text-xs text-stone-500">Aucun calendrier virtuel n&apos;est disponible actuellement.</p>;
