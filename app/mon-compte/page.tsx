@@ -56,6 +56,7 @@ export default function AccountPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteEmail, setDeleteEmail] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const userJson = localStorage.getItem("lyjy_current_user");
@@ -141,7 +142,12 @@ export default function AccountPage() {
   const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || deleteConfirmation !== "SUPPRIMER" || deleteEmail.trim().toLowerCase() !== String(currentUser.email).toLowerCase()) return;
-    if (!window.confirm("Cette action est définitive. Confirmer la suppression du compte ?")) return;
+    setShowDeleteConfirm(true);
+    return;
+  };
+
+  const confirmDeleteAccount = async () => {
+    setShowDeleteConfirm(false);
     setIsDeletingAccount(true);
     try {
       if (!auth.currentUser) throw new Error("session");
@@ -718,6 +724,18 @@ export default function AccountPage() {
           )}
         </div>
       </div>
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md border border-[#C4A77D]/60 bg-stone-950 p-8 shadow-2xl">
+            <h2 className="font-serif text-xl tracking-[0.15em] text-[#C4A77D]">Confirmer la suppression</h2>
+            <p className="mt-4 text-sm text-stone-300">Cette action est définitive. Votre compte et vos données de profil seront supprimés.</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => setShowDeleteConfirm(false)} className="border border-stone-700 px-5 py-3 text-xs uppercase tracking-widest text-stone-300">Annuler</button>
+              <button type="button" onClick={() => void confirmDeleteAccount()} className="border border-red-500 bg-red-500/10 px-5 py-3 text-xs uppercase tracking-widest text-red-400">Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
