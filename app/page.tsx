@@ -117,6 +117,10 @@ export default function Home() {
         >
           Découvrir la collection
         </Link>
+        <div className={`mt-16 max-w-4xl text-center text-sm leading-relaxed ${isDayMode ? "text-stone-700" : "text-stone-300"}`}>
+          <h2 className="font-serif text-xl tracking-[0.18em] text-[#C4A77D]">Bijoux artisanaux faits main</h2>
+          <p className="mt-4">Découvrez les créations uniques de LYJY Atelier : colliers, bracelets, bagues et bijoux personnalisés imaginés pour offrir ou se faire plaisir. Chaque pièce est confectionnée avec passion en petite série.</p>
+        </div>
       </section>
     </main>
   );

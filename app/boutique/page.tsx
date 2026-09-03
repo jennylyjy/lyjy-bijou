@@ -111,6 +111,7 @@ export default function BoutiquePage() {
         </Link>
         
         <h1 className="text-lg font-serif tracking-[0.2em] text-[#C4A77D]">Boutique LYJY</h1>
+        <p className="sr-only">Bijoux artisanaux faits main, idées cadeaux et créations personnalisées LYJY Atelier.</p>
 
         <div className="flex items-center gap-6">
           <button 
