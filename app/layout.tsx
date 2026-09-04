@@ -6,6 +6,7 @@ import { useCartStore } from "@/store/useCartStore";
 import "./globals.css";
 import Link from "next/link";
 import GlobalAlert from "@/components/GlobalAlert";
+import PartyLensBanner from "@/components/PartyLensBanner";
 
 export default function RootLayout({
   children,
@@ -38,6 +39,7 @@ export default function RootLayout({
       <body className={`min-h-screen font-sans transition-colors duration-500 ${
         isDayMode ? "bg-[#F9F8F6] text-stone-900" : "bg-black text-stone-200"
       }`}>
+        <PartyLensBanner />
         {children}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org", "@type": "Store", name: "LYJY Atelier Bijoux", url: "https://lyjy.fr/", logo: "https://lyjy.fr/logo.png", image: "https://lyjy.fr/lyjy-banner-email.jpg", description: "Bijoux artisanaux et créations uniques faits main par LYJY Atelier.", email: "contact-lyjy@lyjy.fr", address: { "@type": "PostalAddress", addressCountry: "FR" }
