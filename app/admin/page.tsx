@@ -867,7 +867,6 @@ function AdminPage() {
         },
         imageUrl: imageUrls[0],
         imageUrls: imageUrls,
-        variants: editingArticle.variants || [],
         isAvailable: true,
         createdAt: new Date().toISOString()
       });
@@ -910,6 +909,24 @@ function AdminPage() {
       const pRed = parseFloat(editingArticle.reduction) || 0;
       const fPrice = pPrice * (1 - pRed / 100);
 
+      const editedVariants: { label: string; imageUrl: string; quantity: number }[] = [];
+      for (let i = 0; i < (editingArticle.variants || []).length; i++) {
+        const variant = editingArticle.variants[i];
+        if (!String(variant.label || "").trim()) continue;
+        let variantImageUrl = variant.imageUrl || "/logo.png";
+        if (variant.file) {
+          const variantRef = ref(storage, `articles/variants/${Date.now()}_${i}_${variant.file.name}`);
+          const snapshot = await uploadBytes(variantRef, variant.file);
+          variantImageUrl = await getDownloadURL(snapshot.ref);
+        }
+        editedVariants.push({
+          label: String(variant.label).trim(),
+          imageUrl: variantImageUrl,
+          quantity: Math.max(0, parseInt(variant.quantity) || 0),
+        });
+      }
+      const hasVariants = editedVariants.length > 0;
+
       const articleRef = doc(db, "articles", editingArticle.id);
       const updatedData: any = {
         title: editingArticle.title,
@@ -917,7 +934,7 @@ function AdminPage() {
         price: pPrice,
         reduction: pRed,
         finalPrice: fPrice,
-        quantity: parseInt(editingArticle.quantity) || 0,
+        quantity: hasVariants ? editedVariants.reduce((total, variant) => total + variant.quantity, 0) : parseInt(editingArticle.quantity) || 0,
         weight: parseInt(editingArticle.weight) || 0,
         category: editingArticle.category.toLowerCase(),
         subcategory: String(editingArticle.subcategory || "").toLowerCase(),
@@ -925,6 +942,7 @@ function AdminPage() {
         color: String(editingArticle.color || "").toLowerCase(),
         imageUrl: imageUrls[0],
         imageUrls: imageUrls,
+        variants: editedVariants,
       };
 
       if (editingArticle.isAdvent || editingArticle.category === "calendrier-avent") {
@@ -2480,6 +2498,25 @@ function AdminPage() {
                       ))}
                     </div>
                   )}
+                </div>
+
+                <div className={`border p-4 space-y-4 ${isDayMode ? "border-stone-300 bg-stone-50" : "border-stone-800 bg-black"}`}>
+                  <div>
+                    <label className="block uppercase text-stone-500 mb-1">Modifier les variantes</label>
+                    <p className="text-[10px] text-stone-500">Modifiez le nom, le stock ou remplacez la photo de chaque variante. Le stock total est recalculé automatiquement.</p>
+                  </div>
+                  {(editingArticle.variants || []).map((variant: any, index: number) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1.3fr_100px_auto] gap-2 items-center">
+                      <input value={variant.label || ""} onChange={(e) => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.map((item: any, i: number) => i === index ? { ...item, label: e.target.value } : item) })} placeholder="Nom / lettre" className={`p-3 border text-sm ${isDayMode ? "bg-white border-stone-300" : "bg-stone-950 border-stone-800"}`} />
+                      <div>
+                        <input type="file" accept="image/*" onChange={(e) => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.map((item: any, i: number) => i === index ? { ...item, file: e.target.files?.[0] || null } : item) })} className="w-full text-xs text-stone-500 file:mr-3 file:py-2 file:px-3 file:border-0 file:text-xs file:bg-[#C4A77D] file:text-black" />
+                        {variant.file?.name && <span className="text-[10px] text-[#C4A77D]">Nouvelle photo : {variant.file.name}</span>}
+                      </div>
+                      <input type="number" min="0" value={variant.quantity ?? 0} onChange={(e) => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.map((item: any, i: number) => i === index ? { ...item, quantity: e.target.value } : item) })} placeholder="Stock" className={`p-3 border text-sm ${isDayMode ? "bg-white border-stone-300" : "bg-stone-950 border-stone-800"}`} />
+                      <button type="button" onClick={() => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.filter((_: any, i: number) => i !== index) })} className="text-red-400 text-xs uppercase">Supprimer</button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setEditingArticle({ ...editingArticle, variants: [...(editingArticle.variants || []), { label: "", imageUrl: "/logo.png", quantity: 0, file: null }] })} className="border border-[#C4A77D]/50 text-[#C4A77D] px-3 py-2 text-[10px] uppercase tracking-widest">+ Ajouter une variante</button>
                 </div>
 
                 <div>
