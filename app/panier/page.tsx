@@ -1490,6 +1490,14 @@ const CartPage = () => {
 
                       {item.options && (
                         <div className="mt-2 text-[11px] space-y-0.5 border-l-2 border-[#C4A77D] pl-2 py-0.5 text-stone-400">
+                          {item.options.variant && (
+                            <p>
+                              <span className="text-stone-500 uppercase">
+                                Couleur / lettre :
+                              </span>{" "}
+                              {item.options.variant}
+                            </p>
+                          )}
                           {item.options.formule && (
                             <p>
                               <span className="text-stone-500 uppercase">
