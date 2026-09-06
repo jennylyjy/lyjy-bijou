@@ -251,7 +251,16 @@ function AdminPage() {
     .filter(o => o.status !== "cancelled" && (!statsSince || new Date(o.createdAt || o.date || 0).getTime() >= statsSince))
     .reduce((sum, o) => sum + (typeof o.total === "number" ? o.total : parseFloat(o.total) || 0), 0);
 
-  const lowStockArticles = articles.filter(a => (parseInt(a.quantity) || 0) <= 2);
+  const getArticleStock = (article: any) => {
+    if (Array.isArray(article.variants) && article.variants.length > 0) {
+      return article.variants.reduce((total: number, variant: any) => total + Math.max(0, Number(variant.quantity) || 0), 0);
+    }
+    return Math.max(0, Number(article.quantity) || 0);
+  };
+  const lowStockArticles = articles.filter(article => {
+    const stock = getArticleStock(article);
+    return article.isAvailable !== false && !article.isCustomGiftCard && stock > 0 && stock <= 2;
+  });
   const adventArticles = articles.filter(a => a.isAdvent || a.category === "calendrier-avent");
   const adventCategoryAvailability = catalogTaxonomy.categories
     .filter(item => item.isVisible && item.id !== "calendrier-avent")
