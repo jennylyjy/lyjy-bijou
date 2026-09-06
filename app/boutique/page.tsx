@@ -154,8 +154,6 @@ export default function BoutiquePage() {
             </label>
           ))}
         </div>
-        <div className="text-center py-8 border-y border-[#C4A77D]/40"><p className="font-serif text-2xl md:text-4xl tracking-[0.35em] text-[#C4A77D] drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">OUVERTURE PROCHAINEMENT</p></div>
-
         {filteredProducts.length === 0 ? (
           <p className="text-center text-xs tracking-widest text-stone-500 uppercase py-12">
             Aucun article disponible pour le moment.
