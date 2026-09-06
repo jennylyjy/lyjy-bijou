@@ -2405,8 +2405,8 @@ function AdminPage() {
 
         {/* MODALE D'ÉDITION D'UN ARTICLE */}
         {editingArticle && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className={`p-8 border max-w-2xl w-full space-y-6 ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-stone-950 border-stone-900 text-stone-100"}`}>
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8 overflow-y-auto">
+            <div className={`p-8 border max-w-2xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto space-y-6 ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-stone-950 border-stone-900 text-stone-100"}`}>
               <div className="flex justify-between items-center border-b pb-4 border-stone-800">
                 <h3 className="font-serif text-lg tracking-[0.2em] text-[#C4A77D]">Modifier l'article : {editingArticle.ref}</h3>
                 <button onClick={() => setEditingArticle(null)} className="text-stone-400 hover:text-stone-200"><X className="w-5 h-5" /></button>
