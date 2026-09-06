@@ -77,6 +77,7 @@ function AdminPage() {
   const [articleColor, setArticleColor] = useState("");
   const [catalogTaxonomy, setCatalogTaxonomy] = useState<CatalogTaxonomy>(defaultCatalogTaxonomy);
   const [articleImageFiles, setArticleImageFiles] = useState<FileList | null>(null);
+  const [articleVariants, setArticleVariants] = useState<{ label: string; file: File | null }[]>([]);
   const [articleFilterCategory, setArticleFilterCategory] = useState("all");
   const [articleSearchRef, setArticleSearchRef] = useState("");
   const [isSubmittingArticle, setIsSubmittingArticle] = useState(false);
@@ -748,6 +749,15 @@ function AdminPage() {
         imageUrls = uploadedUrls;
       }
 
+      const variants: { label: string; imageUrl: string }[] = [];
+      for (let i = 0; i < articleVariants.length; i++) {
+        const variant = articleVariants[i];
+        if (!variant.label.trim() || !variant.file) continue;
+        const storageRef = ref(storage, `articles/variants/${Date.now()}_${i}_${variant.file.name}`);
+        const snapshot = await uploadBytes(storageRef, variant.file);
+        variants.push({ label: variant.label.trim(), imageUrl: await getDownloadURL(snapshot.ref) });
+      }
+
       const generatedRef = `LYJY-${Math.floor(100000 + Math.random() * 900000)}`;
 
       await addDoc(collection(db, "articles"), {
@@ -765,6 +775,7 @@ function AdminPage() {
         color: articleColor.toLowerCase(),
         imageUrl: imageUrls[0],
         imageUrls: imageUrls,
+        variants,
         isAvailable: true,
         createdAt: new Date().toISOString()
       });
@@ -781,6 +792,7 @@ function AdminPage() {
       setArticleColor("");
       setArticleCategory("");
       setArticleImageFiles(null);
+      setArticleVariants([]);
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error: any) {
       alert("Erreur enregistrement article : " + error.message);
@@ -852,6 +864,7 @@ function AdminPage() {
         },
         imageUrl: imageUrls[0],
         imageUrls: imageUrls,
+        variants: editingArticle.variants || [],
         isAvailable: true,
         createdAt: new Date().toISOString()
       });
@@ -1302,6 +1315,21 @@ function AdminPage() {
                       <span className="text-[10px] text-[#C4A77D] mt-1 block">{articleImageFiles.length} fichier(s) sélectionné(s)</span>
                     )}
                   </div>
+                </div>
+
+                <div className={`border p-4 space-y-4 ${isDayMode ? "border-stone-300 bg-white" : "border-stone-800 bg-black"}`}>
+                  <div>
+                    <label className="block uppercase text-stone-500 mb-1">Variantes couleur ou lettre</label>
+                    <p className="text-[10px] text-stone-500">Ajoutez une pastille par variante et sa photo correspondante. Exemple : Doré, Argenté, A, B.</p>
+                  </div>
+                  {articleVariants.map((variant, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                      <input value={variant.label} onChange={(e) => setArticleVariants(prev => prev.map((item, i) => i === index ? { ...item, label: e.target.value } : item))} placeholder="Nom / lettre" className={`p-3 border text-sm ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-stone-950 border-stone-800 text-stone-100"}`} />
+                      <input type="file" accept="image/*" onChange={(e) => setArticleVariants(prev => prev.map((item, i) => i === index ? { ...item, file: e.target.files?.[0] || null } : item))} className="w-full text-xs text-stone-500 file:mr-3 file:py-2 file:px-3 file:border-0 file:text-xs file:bg-[#C4A77D] file:text-black" />
+                      <button type="button" onClick={() => setArticleVariants(prev => prev.filter((_, i) => i !== index))} className="text-red-400 text-xs uppercase">Supprimer</button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setArticleVariants(prev => [...prev, { label: "", file: null }])} className="border border-[#C4A77D]/50 text-[#C4A77D] px-3 py-2 text-[10px] uppercase tracking-widest">+ Ajouter une variante</button>
                 </div>
 
                 <div>

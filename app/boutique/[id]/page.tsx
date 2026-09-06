@@ -21,6 +21,7 @@ export default function ArticleDetailPage() {
   const [article, setArticle] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState<string>("");
+  const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -37,6 +38,7 @@ export default function ArticleDetailPage() {
           const data = { id: docSnap.id, ...docSnap.data() } as any;
           setArticle(data);
           setActiveImage(data.imageUrl || data.imageUrls?.[0] || "/logo.png");
+          setSelectedVariant(data.variants?.[0] || null);
         }
       } catch (err) {
         console.error("Erreur chargement article :", err);
@@ -71,8 +73,9 @@ export default function ArticleDetailPage() {
       name: article.title,
       price: article.finalPrice ?? article.price,
       quantity: 1,
-      image: article.imageUrl || "/logo.png",
-      stock: Number(article.quantity) || 0
+      image: selectedVariant?.imageUrl || article.imageUrl || "/logo.png",
+      stock: Number(article.quantity) || 0,
+      options: selectedVariant ? { variant: selectedVariant.label } : undefined
     });
     setSuccessMessage("Article ajouté au panier !");
     setTimeout(() => setSuccessMessage(""), 3000);
@@ -127,6 +130,7 @@ export default function ArticleDetailPage() {
   }
 
   const imagesList = article.imageUrls && article.imageUrls.length > 0 ? article.imageUrls : [article.imageUrl || "/logo.png"];
+  const variants = Array.isArray(article.variants) ? article.variants.filter((variant: any) => variant?.label && variant?.imageUrl) : [];
   const isCalendar = article.category?.toLowerCase() === "calendrier" || article.title?.toLowerCase().includes("calendrier");
   const isCustomGiftCard = article.isCustomGiftCard === true;
 
@@ -164,6 +168,18 @@ export default function ArticleDetailPage() {
                   <img src={img} alt="miniature" className="w-full h-full object-cover" />
                 </button>
               ))}
+            </div>
+          )}
+          {variants.length > 0 && (
+            <div className="space-y-2">
+              <p className="uppercase text-[10px] tracking-widest text-stone-500">Choisissez votre couleur / lettre</p>
+              <div className="flex flex-wrap gap-3">
+                {variants.map((variant: any) => (
+                  <button type="button" key={`${variant.label}-${variant.imageUrl}`} onClick={() => { setSelectedVariant(variant); setActiveImage(variant.imageUrl); }} title={variant.label} className={`min-w-10 h-10 px-3 rounded-full border text-xs uppercase transition-all ${selectedVariant?.label === variant.label ? "border-[#C4A77D] ring-2 ring-[#C4A77D]/30 text-[#C4A77D]" : "border-stone-700 text-stone-300 hover:border-[#C4A77D]"}`}>
+                    {variant.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
