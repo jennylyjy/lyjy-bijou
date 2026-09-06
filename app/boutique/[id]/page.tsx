@@ -38,7 +38,8 @@ export default function ArticleDetailPage() {
           const data = { id: docSnap.id, ...docSnap.data() } as any;
           setArticle(data);
           setActiveImage(data.imageUrl || data.imageUrls?.[0] || "/logo.png");
-          setSelectedVariant(data.variants?.[0] || null);
+          // Aucune variante n'est sélectionnée par défaut : le client voit d'abord la galerie générale.
+          setSelectedVariant(null);
         }
       } catch (err) {
         console.error("Erreur chargement article :", err);
@@ -131,6 +132,7 @@ export default function ArticleDetailPage() {
 
   const imagesList = article.imageUrls && article.imageUrls.length > 0 ? article.imageUrls : [article.imageUrl || "/logo.png"];
   const variants = Array.isArray(article.variants) ? article.variants.filter((variant: any) => variant?.label && variant?.imageUrl) : [];
+  const galleryImages = Array.from(new Set([...imagesList, ...variants.map((variant: any) => variant.imageUrl)]));
   const isCalendar = article.category?.toLowerCase() === "calendrier" || article.title?.toLowerCase().includes("calendrier");
   const isCustomGiftCard = article.isCustomGiftCard === true;
 
@@ -157,13 +159,17 @@ export default function ArticleDetailPage() {
           <div className="aspect-square border border-stone-800 bg-stone-900 overflow-hidden">
             <img src={activeImage} alt={article.title} className="w-full h-full object-cover" />
           </div>
-          {imagesList.length > 1 && (
+          {galleryImages.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
-              {imagesList.map((img: string, idx: number) => (
+              {galleryImages.map((img: string, idx: number) => (
                 <button 
                   key={idx} 
-                  onClick={() => setActiveImage(img)}
-                  className={`w-16 h-16 border flex-shrink-0 overflow-hidden transition-all ${activeImage === img ? "border-[#C4A77D] opacity-100" : "border-stone-800 opacity-60 hover:opacity-100"}`}
+                  onClick={() => {
+                    const matchingVariant = variants.find((variant: any) => variant.imageUrl === img);
+                    setSelectedVariant(matchingVariant || null);
+                    setActiveImage(img);
+                  }}
+                  className={`w-16 h-16 border flex-shrink-0 overflow-hidden transition-all ${!selectedVariant && activeImage === img ? "border-[#C4A77D] opacity-100" : "border-stone-800 opacity-60 hover:opacity-100"}`}
                 >
                   <img src={img} alt="miniature" className="w-full h-full object-cover" />
                 </button>
@@ -174,8 +180,11 @@ export default function ArticleDetailPage() {
             <div className="space-y-2">
               <p className="uppercase text-[10px] tracking-widest text-stone-500">Choisissez votre couleur / lettre</p>
               <div className="flex flex-wrap gap-3">
+                <button type="button" onClick={() => { setSelectedVariant(null); setActiveImage(imagesList[0] || "/logo.png"); }} className={`h-10 px-4 rounded-full border text-[10px] uppercase tracking-wider transition-all ${!selectedVariant ? "border-[#C4A77D] ring-2 ring-[#C4A77D]/30 text-[#C4A77D]" : "border-stone-700 text-stone-300 hover:border-[#C4A77D]"}`}>
+                  Toutes les photos
+                </button>
                 {variants.map((variant: any) => (
-                  <button type="button" key={`${variant.label}-${variant.imageUrl}`} onClick={() => { setSelectedVariant(variant); setActiveImage(variant.imageUrl); }} title={variant.label} className={`min-w-10 h-10 px-3 rounded-full border text-xs uppercase transition-all ${selectedVariant?.label === variant.label ? "border-[#C4A77D] ring-2 ring-[#C4A77D]/30 text-[#C4A77D]" : "border-stone-700 text-stone-300 hover:border-[#C4A77D]"}`}>
+                  <button type="button" key={`${variant.label}-${variant.imageUrl}`} onClick={() => { if (selectedVariant?.label === variant.label) { setSelectedVariant(null); setActiveImage(imagesList[0] || "/logo.png"); } else { setSelectedVariant(variant); setActiveImage(variant.imageUrl); } }} title={variant.label} className={`min-w-10 h-10 px-3 rounded-full border text-xs uppercase transition-all ${selectedVariant?.label === variant.label ? "border-[#C4A77D] ring-2 ring-[#C4A77D]/30 text-[#C4A77D]" : "border-stone-700 text-stone-300 hover:border-[#C4A77D]"}`}>
                     {variant.label}
                   </button>
                 ))}
