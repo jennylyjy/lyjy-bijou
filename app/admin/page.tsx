@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
-  ArrowLeft, Sun, Moon, Shield, Trash2, Check, Package, Clock, 
+  Sun, Moon, Shield, Trash2, Check, Package, Clock, 
   Send, CheckCircle2, FileText, X, Plus, Eye, EyeOff, Edit, Lock, LogOut, Truck,
   Tag, TrendingUp, AlertTriangle, Euro, Calendar, Users, Wand2, Gift, Sparkles, Settings
 } from "lucide-react";
@@ -1055,12 +1055,6 @@ function AdminPage() {
       <header className={`flex items-center justify-between border-b pb-6 mb-10 transition-colors duration-500 ${
         isDayMode ? "border-stone-200" : "border-stone-900"
       }`}>
-        <Link href="/" className={`flex items-center gap-2 text-xs tracking-widest uppercase transition-colors ${
-          isDayMode ? "text-stone-600 hover:text-[#C4A77D]" : "text-stone-400 hover:text-[#C4A77D]"
-        }`}>
-          <ArrowLeft className="w-4 h-4" /> Boutique
-        </Link>
-        
         <h1 className="text-lg font-serif tracking-[0.2em] text-[#C4A77D]">Administration LYJY</h1>
 
         <div className="flex items-center gap-4">
