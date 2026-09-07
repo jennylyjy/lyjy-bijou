@@ -253,7 +253,9 @@ function AdminPage() {
 
   const getArticleStock = (article: any) => {
     if (Array.isArray(article.variants) && article.variants.length > 0) {
-      return article.variants.reduce((total: number, variant: any) => total + Math.max(0, Number(variant.quantity) || 0), 0);
+      return article.variants
+        .filter((variant: any) => variant.isAvailable !== false)
+        .reduce((total: number, variant: any) => total + Math.max(0, Number(variant.quantity) || 0), 0);
     }
     return Math.max(0, Number(article.quantity) || 0);
   };
@@ -758,13 +760,13 @@ function AdminPage() {
         imageUrls = uploadedUrls;
       }
 
-      const variants: { label: string; imageUrl: string; quantity: number }[] = [];
+      const variants: { label: string; imageUrl: string; quantity: number; isAvailable: boolean }[] = [];
       for (let i = 0; i < articleVariants.length; i++) {
         const variant = articleVariants[i];
         if (!variant.label.trim() || !variant.file) continue;
         const storageRef = ref(storage, `articles/variants/${Date.now()}_${i}_${variant.file.name}`);
         const snapshot = await uploadBytes(storageRef, variant.file);
-        variants.push({ label: variant.label.trim(), imageUrl: await getDownloadURL(snapshot.ref), quantity: Math.max(0, parseInt(variant.quantity) || 0) });
+        variants.push({ label: variant.label.trim(), imageUrl: await getDownloadURL(snapshot.ref), quantity: Math.max(0, parseInt(variant.quantity) || 0), isAvailable: true });
       }
       const totalQuantity = variants.length > 0
         ? variants.reduce((total, variant) => total + variant.quantity, 0)
@@ -918,7 +920,7 @@ function AdminPage() {
       const pRed = parseFloat(editingArticle.reduction) || 0;
       const fPrice = pPrice * (1 - pRed / 100);
 
-      const editedVariants: { label: string; imageUrl: string; quantity: number }[] = [];
+      const editedVariants: { label: string; imageUrl: string; quantity: number; isAvailable: boolean }[] = [];
       for (let i = 0; i < (editingArticle.variants || []).length; i++) {
         const variant = editingArticle.variants[i];
         if (!String(variant.label || "").trim()) continue;
@@ -932,6 +934,7 @@ function AdminPage() {
           label: String(variant.label).trim(),
           imageUrl: variantImageUrl,
           quantity: Math.max(0, parseInt(variant.quantity) || 0),
+          isAvailable: variant.isAvailable !== false,
         });
       }
       const hasVariants = editedVariants.length > 0;
@@ -943,7 +946,7 @@ function AdminPage() {
         price: pPrice,
         reduction: pRed,
         finalPrice: fPrice,
-        quantity: hasVariants ? editedVariants.reduce((total, variant) => total + variant.quantity, 0) : parseInt(editingArticle.quantity) || 0,
+        quantity: hasVariants ? editedVariants.filter(variant => variant.isAvailable).reduce((total, variant) => total + variant.quantity, 0) : parseInt(editingArticle.quantity) || 0,
         weight: parseInt(editingArticle.weight) || 0,
         category: editingArticle.category.toLowerCase(),
         subcategory: String(editingArticle.subcategory || "").toLowerCase(),
@@ -2520,10 +2523,15 @@ function AdminPage() {
                         {variant.file?.name && <span className="text-[10px] text-[#C4A77D]">Nouvelle photo : {variant.file.name}</span>}
                       </div>
                       <input type="number" min="0" value={variant.quantity ?? 0} onChange={(e) => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.map((item: any, i: number) => i === index ? { ...item, quantity: e.target.value } : item) })} placeholder="Stock" className={`p-3 border text-sm ${isDayMode ? "bg-white border-stone-300" : "bg-stone-950 border-stone-800"}`} />
-                      <button type="button" onClick={() => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.filter((_: any, i: number) => i !== index) })} className="text-red-400 text-xs uppercase">Supprimer</button>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.map((item: any, i: number) => i === index ? { ...item, isAvailable: item.isAvailable === false } : item) })} className={`p-2 border ${variant.isAvailable === false ? "border-red-500/40 text-red-400" : "border-green-500/40 text-green-400"}`} title={variant.isAvailable === false ? "Réactiver la variante" : "Masquer la variante"}>
+                          {variant.isAvailable === false ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        <button type="button" onClick={() => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.filter((_: any, i: number) => i !== index) })} className="text-red-400 text-xs uppercase">Supprimer</button>
+                      </div>
                     </div>
                   ))}
-                  <button type="button" onClick={() => setEditingArticle({ ...editingArticle, variants: [...(editingArticle.variants || []), { label: "", imageUrl: "/logo.png", quantity: 0, file: null }] })} className="border border-[#C4A77D]/50 text-[#C4A77D] px-3 py-2 text-[10px] uppercase tracking-widest">+ Ajouter une variante</button>
+                  <button type="button" onClick={() => setEditingArticle({ ...editingArticle, variants: [...(editingArticle.variants || []), { label: "", imageUrl: "/logo.png", quantity: 0, isAvailable: true, file: null }] })} className="border border-[#C4A77D]/50 text-[#C4A77D] px-3 py-2 text-[10px] uppercase tracking-widest">+ Ajouter une variante</button>
                 </div>
 
                 <div>

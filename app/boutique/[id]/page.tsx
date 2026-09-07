@@ -131,7 +131,7 @@ export default function ArticleDetailPage() {
   }
 
   const imagesList = article.imageUrls && article.imageUrls.length > 0 ? article.imageUrls : [article.imageUrl || "/logo.png"];
-  const variants = Array.isArray(article.variants) ? article.variants.filter((variant: any) => variant?.label && variant?.imageUrl) : [];
+  const variants = Array.isArray(article.variants) ? article.variants.filter((variant: any) => variant?.label && variant?.imageUrl && variant.isAvailable !== false) : [];
   const galleryImages = Array.from(new Set([...imagesList, ...variants.map((variant: any) => variant.imageUrl)]));
   const isCalendar = article.category?.toLowerCase() === "calendrier" || article.title?.toLowerCase().includes("calendrier");
   const isCustomGiftCard = article.isCustomGiftCard === true;
