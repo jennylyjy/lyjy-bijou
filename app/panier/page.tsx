@@ -732,7 +732,8 @@ const CartPage = () => {
     : 0;
   const loyaltyDiscountAmount = loyaltyDiscountPoints / 100;
   const totalWithLoyalty = Math.max(0, finalTotal - loyaltyDiscountAmount);
-  const loyaltyPointsEarned = Math.floor(totalWithLoyalty);
+  // Les points récompensent les articles achetés, hors frais de livraison et emballage.
+  const loyaltyPointsEarned = Math.floor(Math.max(0, subtotalAfterPromo - loyaltyDiscountAmount));
   const surpriseGiftEligible = subtotalAfterPromo >= 200;
 
   const handleTestCheckout =
@@ -1844,7 +1845,7 @@ const CartPage = () => {
                     <span>Convertir mes {loyaltyPoints} points en {loyaltyPoints.toFixed(2)} € de réduction (1 point = 0,01 €)</span>
                   </label>
                 )}
-                <div className="text-[11px] text-stone-500">Votre achat va vous rapporter environ {loyaltyPointsEarned} point(s).</div>
+                <div className="border border-[#C4A77D]/30 bg-[#C4A77D]/5 p-3 text-sm text-[#C4A77D]">✨ Votre achat va vous rapporter <strong>{loyaltyPointsEarned} point(s)</strong>.</div>
 
                 {shippingMethods.length > 0 && <label className="block border-t border-stone-800 pt-3">Livraison ({totalWeight} g)
                   <select value={shippingMethodId} onChange={e => setShippingMethodId(e.target.value)} className="w-full mt-2 p-2 bg-black border border-stone-700">
