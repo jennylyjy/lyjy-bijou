@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, ArrowLeft, ShoppingBag } from "lucide-react";
 import { useThemeStore } from "../../store/useThemeStore";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, doc, increment, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useCartStore } from "@/store/useCartStore";
 
@@ -18,7 +18,7 @@ export default function OrderSuccessPage() {
       const storedUser = JSON.parse(localStorage.getItem("lyjy_current_user") || "null");
       const cartKey = storedUser?.email ? `lyjy_cart_${storedUser.email}` : "lyjy_cart_guest";
       const rawCart = localStorage.getItem(cartKey);
-      fetch(`/api/stripe/session?session_id=${encodeURIComponent(new URLSearchParams(window.location.search).get("session_id") || "")}`).then(response => response.json()).then(async payment => { if (!payment.paid || !rawCart) return; const items = JSON.parse(rawCart); const created = { id: `CMD-${Date.now().toString().slice(-6)}`, clientName: storedUser ? `${storedUser.firstName || ""} ${storedUser.lastName || ""}`.trim() || "Client" : "Client Invité", clientEmail: payment.email || storedUser?.email || "", status: "preparing", total: payment.amount, items, date: new Date().toLocaleDateString("fr-FR"), createdAt: new Date().toISOString() }; await addDoc(collection(db, "orders"), created); setOrder(created); localStorage.removeItem(cartKey); useCartStore.getState().resetCart(); localStorage.removeItem("lyjy_last_order"); }).catch(() => undefined);
+      fetch(`/api/stripe/session?session_id=${encodeURIComponent(new URLSearchParams(window.location.search).get("session_id") || "")}`).then(response => response.json()).then(async payment => { if (!payment.paid || !rawCart) return; const items = JSON.parse(rawCart); const sessionId = new URLSearchParams(window.location.search).get("session_id") || ""; const pendingLoyalty = JSON.parse(localStorage.getItem("lyjy_pending_loyalty") || "{}"); const pointsEarned = Number(pendingLoyalty.pointsEarned) || Math.floor(Number(payment.amount) || 0); const pointsUsed = Number(pendingLoyalty.pointsUsed) || 0; const created = { id: `CMD-${Date.now().toString().slice(-6)}`, clientName: storedUser ? `${storedUser.firstName || ""} ${storedUser.lastName || ""}`.trim() || "Client" : "Client Invité", clientEmail: payment.email || storedUser?.email || "", status: "preparing", total: payment.amount, items, loyaltyPointsEarned: pointsEarned, loyaltyPointsUsed: pointsUsed, date: new Date().toLocaleDateString("fr-FR"), createdAt: new Date().toISOString() }; await addDoc(collection(db, "orders"), created); if (storedUser?.uid && sessionId && localStorage.getItem(`lyjy_loyalty_${sessionId}`) !== "1") { await updateDoc(doc(db, "users", storedUser.uid), { loyaltyPoints: increment(pointsEarned - pointsUsed) }); localStorage.setItem(`lyjy_loyalty_${sessionId}`, "1"); } localStorage.removeItem("lyjy_pending_loyalty"); setOrder(created); localStorage.removeItem(cartKey); useCartStore.getState().resetCart(); localStorage.removeItem("lyjy_last_order"); }).catch(() => undefined);
       return;
     }
     const savedOrder = localStorage.getItem("lyjy_last_order");

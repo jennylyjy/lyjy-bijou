@@ -20,7 +20,7 @@ import { useCartStore } from "@/store/useCartStore";
 import { db } from "../../lib/firebase";
 import { auth } from "../../lib/firebase";
 import { signOut } from "firebase/auth";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore";
 import VirtualAdventCalendar from "@/components/VirtualAdventCalendar";
 
 const orderTimestamp = (order: any) => {
@@ -68,6 +68,13 @@ export default function AccountPage() {
 
     const user = JSON.parse(userJson);
     setCurrentUser(user);
+    if (user.uid) {
+      getDoc(doc(db, "users", user.uid)).then(snapshot => {
+        if (!snapshot.exists()) return;
+        const loyaltyPoints = Math.max(0, Number(snapshot.data().loyaltyPoints) || 0);
+        setCurrentUser((current: any) => ({ ...current, loyaltyPoints }));
+      }).catch(() => undefined);
+    }
 
     if (user.addressDetails) {
       setStreet(user.addressDetails.street || "");
@@ -372,6 +379,12 @@ export default function AccountPage() {
                 commandes récentes, gérer vos adresses de livraison et modifier
                 vos informations personnelles.
               </p>
+
+              <div className="p-4 border border-[#C4A77D]/40 bg-[#C4A77D]/5">
+                <h4 className="text-xs uppercase tracking-widest text-[#C4A77D] mb-1">Programme fidélité</h4>
+                <p className="text-2xl font-serif">{currentUser.loyaltyPoints || 0} points</p>
+                <p className="text-[11px] text-stone-500 mt-1">1 point = 0,01 € de réduction sur votre prochaine commande.</p>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                 <div

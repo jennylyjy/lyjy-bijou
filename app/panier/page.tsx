@@ -13,6 +13,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   increment,
   query,
@@ -22,6 +23,7 @@ import {
 import { useThemeStore } from "@/store/useThemeStore";
 import { useCartStore } from "@/store/useCartStore";
 import { db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 
 interface CouponData {
   id: string;
@@ -177,6 +179,8 @@ const CartPage = () => {
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
   const [shippingMethodId, setShippingMethodId] = useState("");
   const [shippingPrice, setShippingPrice] = useState(0);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
   const [giftPackaging, setGiftPackaging] = useState(false);
   const [giftMessage, setGiftMessage] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -200,6 +204,15 @@ const CartPage = () => {
   const items = useCartStore(
     state => state.items,
   );
+
+  useEffect(() => {
+    const loadLoyaltyPoints = async () => {
+      if (!auth.currentUser) return setLoyaltyPoints(0);
+      const snapshot = await getDoc(doc(db, "users", auth.currentUser.uid));
+      setLoyaltyPoints(Math.max(0, Number(snapshot.data()?.loyaltyPoints) || 0));
+    };
+    loadLoyaltyPoints().catch(() => setLoyaltyPoints(0));
+  }, []);
 
   const totalWeight = useMemo(() => Math.max(100, items.reduce((sum, item) => sum + (Number((item as typeof item & { weight?: number }).weight) || 0) * item.quantity, 0)), [items]);
   const simplifiedShippingMethods = useMemo(() => {
@@ -714,6 +727,12 @@ const CartPage = () => {
       subtotalAfterPromo
       - totalGiftBalance,
     ) + (appliedCoupon?.discountType === "free_shipping" && couponMeetsMinimum ? 0 : shippingPrice) + (giftPackaging ? 1 : 0);
+  const loyaltyDiscountPoints = useLoyaltyPoints && auth.currentUser
+    ? Math.min(loyaltyPoints, Math.floor(subtotalAfterPromo * 100))
+    : 0;
+  const loyaltyDiscountAmount = loyaltyDiscountPoints / 100;
+  const totalWithLoyalty = Math.max(0, finalTotal - loyaltyDiscountAmount);
+  const loyaltyPointsEarned = Math.floor(totalWithLoyalty);
   const surpriseGiftEligible = subtotalAfterPromo >= 200;
 
   const handleTestCheckout =
@@ -726,9 +745,10 @@ const CartPage = () => {
       }
       if (!acceptedTerms) { setErrorMessage("Veuillez accepter les CGV-CGU."); return; }
       if (!getStoredUser()) { router.push("/connexion?returnTo=/panier"); return; }
-      const stripeResponse = await fetch("/api/stripe/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ name: "Commande LYJY Atelier", price: finalTotal, quantity: 1 }] }) });
+      const stripeResponse = await fetch("/api/stripe/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ name: "Commande LYJY Atelier", price: totalWithLoyalty, quantity: 1 }] }) });
       const stripeSession = await stripeResponse.json();
       if (!stripeResponse.ok || !stripeSession.url) throw new Error(stripeSession.error || "Paiement Stripe indisponible");
+      localStorage.setItem("lyjy_pending_loyalty", JSON.stringify({ pointsUsed: loyaltyDiscountPoints, pointsEarned: loyaltyPointsEarned }));
       window.location.assign(stripeSession.url);
       return;
 
@@ -951,7 +971,9 @@ const CartPage = () => {
             "preparing",
 
           total:
-            finalTotal,
+            total: totalWithLoyalty,
+            loyaltyPointsUsed: loyaltyDiscountPoints,
+            loyaltyPointsEarned,
 
           shipping: {
             methodId: shippingMethodId || null,
@@ -1085,7 +1107,9 @@ const CartPage = () => {
                         cleanedOrderData.clientName,
 
                       total:
-                        finalTotal,
+                        total: totalWithLoyalty,
+                        loyaltyPointsUsed: loyaltyDiscountPoints,
+                        loyaltyPointsEarned,
 
                       subtotal,
 
@@ -1814,6 +1838,14 @@ const CartPage = () => {
                   </div>
                 )}
 
+                {auth.currentUser && loyaltyPoints > 0 && (
+                  <label className="flex items-start gap-2 border-t border-stone-800 pt-3 text-[#C4A77D]">
+                    <input type="checkbox" checked={useLoyaltyPoints} onChange={e => setUseLoyaltyPoints(e.target.checked)} />
+                    <span>Convertir mes {loyaltyPoints} points en {loyaltyPoints.toFixed(2)} € de réduction (1 point = 0,01 €)</span>
+                  </label>
+                )}
+                <div className="text-[11px] text-stone-500">Votre achat va vous rapporter environ {loyaltyPointsEarned} point(s).</div>
+
                 {shippingMethods.length > 0 && <label className="block border-t border-stone-800 pt-3">Livraison ({totalWeight} g)
                   <select value={shippingMethodId} onChange={e => setShippingMethodId(e.target.value)} className="w-full mt-2 p-2 bg-black border border-stone-700">
                     <option value="">Choisir un transporteur</option>
@@ -1836,7 +1868,7 @@ const CartPage = () => {
                   </span>
 
                   <span>
-                    {finalTotal.toFixed(2)} €
+                    {totalWithLoyalty.toFixed(2)} €
                   </span>
                 </div>
               </div>
