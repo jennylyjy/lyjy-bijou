@@ -26,7 +26,7 @@ import { db } from "@/lib/firebase";
 interface CouponData {
   id: string;
   code: string;
-  discountType: "percent" | "fixed";
+  discountType: "percent" | "fixed" | "free_shipping";
   discountValue: number;
   minimumAmount?: number | string;
   isActive?: boolean;
@@ -334,10 +334,9 @@ const CartPage = () => {
       const data =
         couponDocument.data();
 
-      const discountType =
-        data.discountType
-          === "fixed"
-          ? "fixed"
+      const discountType: CouponData["discountType"] =
+        data.discountType === "fixed" || data.discountType === "free_shipping"
+          ? data.discountType
           : "percent";
 
       const couponData: CouponData = {
@@ -658,7 +657,9 @@ const CartPage = () => {
     appliedCoupon
     && couponMeetsMinimum
   ) {
-    if (
+    if (appliedCoupon.discountType === "free_shipping") {
+      discountAmount = 0;
+    } else if (
       appliedCoupon.discountType
       === "percent"
     ) {
@@ -712,7 +713,7 @@ const CartPage = () => {
       0,
       subtotalAfterPromo
       - totalGiftBalance,
-    ) + shippingPrice + (giftPackaging ? 1 : 0);
+    ) + (appliedCoupon?.discountType === "free_shipping" && couponMeetsMinimum ? 0 : shippingPrice) + (giftPackaging ? 1 : 0);
   const surpriseGiftEligible = subtotalAfterPromo >= 200;
 
   const handleTestCheckout =
@@ -1819,7 +1820,11 @@ const CartPage = () => {
                     {simplifiedShippingMethods.map(method => <option key={method.id} value={method.id}>{method.displayName}</option>)}
                   </select>
                 </label>}
-                {shippingPrice > 0 && <div className="flex justify-between"><span>Livraison</span><span>{shippingPrice.toFixed(2)} €</span></div>}
+                {shippingPrice > 0 && appliedCoupon?.discountType === "free_shipping" && couponMeetsMinimum ? (
+                  <div className="flex justify-between text-green-400"><span>Livraison</span><span>Offerte</span></div>
+                ) : shippingPrice > 0 ? (
+                  <div className="flex justify-between"><span>Livraison</span><span>{shippingPrice.toFixed(2)} €</span></div>
+                ) : null}
                 <div className="border-t border-stone-800 pt-3 space-y-2"><label className="flex items-center gap-2"><input type="checkbox" checked={giftPackaging} onChange={e => setGiftPackaging(e.target.checked)} /> Emballage cadeau + carte (+1,00 €)</label>{giftPackaging && <textarea value={giftMessage} onChange={e => setGiftMessage(e.target.value.slice(0, 300))} placeholder="Message à écrire sur la carte" className="w-full p-2 bg-black border border-stone-700" />}</div>
                 {giftPackaging && <div className="flex justify-between"><span>Emballage cadeau + carte</span><span>1,00 €</span></div>}
                 {surpriseGiftEligible && <div className="border border-green-500/30 bg-green-500/10 p-2 text-green-400">🎁 Cadeau surprise privilège offert (commande de 200 € ou plus, hors livraison)</div>}

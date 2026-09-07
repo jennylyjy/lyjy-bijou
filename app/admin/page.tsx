@@ -316,13 +316,13 @@ function AdminPage() {
 
   const handleAddCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!promoCode || !promoValue) return;
+    if (!promoCode || (promoType !== "free_shipping" && !promoValue)) return;
 
     try {
       await addDoc(collection(db, "coupons"), {
         code: promoCode.toUpperCase().trim(),
         discountType: promoType,
-        discountValue: parseFloat(promoValue) || 0,
+        discountValue: promoType === "free_shipping" ? 0 : parseFloat(promoValue) || 0,
         maxUses: promoMaxUses ? parseInt(promoMaxUses) : null,
         currentUses: 0,
         usedBy: [],
@@ -1977,15 +1977,16 @@ function AdminPage() {
                     >
                       <option value="percent">Pourcentage (%)</option>
                       <option value="fixed">Montant Fixe (€)</option>
+                      <option value="free_shipping">Livraison gratuite</option>
                     </select>
                   </div>
                   <div>
                     <label className="block uppercase text-stone-500 mb-1">Valeur *</label>
-                    <input 
-                      type="number" step="0.01" required value={promoValue} onChange={(e) => setPromoValue(e.target.value)}
-                      placeholder="Ex: 10"
-                      className={`w-full p-3 border text-sm ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-black border-stone-800 text-stone-100"}`}
-                    />
+                    {promoType === "free_shipping" ? (
+                      <div className={`w-full p-3 border text-sm text-[#C4A77D] ${isDayMode ? "bg-stone-100 border-stone-300" : "bg-black border-stone-800"}`}>Frais de livraison offerts</div>
+                    ) : (
+                      <input type="number" step="0.01" required value={promoValue} onChange={(e) => setPromoValue(e.target.value)} placeholder="Ex: 10" className={`w-full p-3 border text-sm ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-black border-stone-800 text-stone-100"}`} />
+                    )}
                   </div>
                 </div>
 
@@ -2052,7 +2053,7 @@ function AdminPage() {
                           <tr key={c.id} className="hover:bg-stone-900/10 transition-colors">
                             <td className="py-4 font-mono font-bold text-sm text-[#C4A77D] uppercase">{c.code}</td>
                             <td className="py-4 text-stone-300 font-medium">
-                              {c.discountValue} {c.discountType === "percent" ? "%" : "€"}
+                              {c.discountType === "free_shipping" ? "Livraison gratuite" : `${c.discountValue} ${c.discountType === "percent" ? "%" : "€"}`}
                             </td>
                             <td className="py-4 text-stone-400">
                               {c.currentUses || 0} / {c.maxUses ? c.maxUses : "∞"}
