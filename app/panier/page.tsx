@@ -204,6 +204,7 @@ const CartPage = () => {
   const items = useCartStore(
     state => state.items,
   );
+  const hasShippableItems = items.some(item => !(item.options?.giftCard && item.options.deliveryType === "virtual"));
 
   useEffect(() => {
     const loadLoyaltyPoints = async () => {
@@ -231,18 +232,19 @@ const CartPage = () => {
     return [...selected.entries()].map(([key, method]) => ({ ...method, displayName: key === "mondial" ? "Mondial Relay — Point relais" : key === "colissimo-relay" ? "Colissimo — Point relais" : "Colissimo — Livraison à domicile" }));
   }, [shippingMethods, totalWeight]);
   const selectedShippingMethod = simplifiedShippingMethods.find(method => String(method.id) === shippingMethodId);
-  const needsServicePoint = Boolean(selectedShippingMethod && (/relais|relay|pickup|point/i.test(selectedShippingMethod.displayName) || (selectedShippingMethod as ShippingMethod & { service_point_input?: string }).service_point_input === "required"));
+  const needsServicePoint = hasShippableItems && Boolean(selectedShippingMethod && (/relais|relay|pickup|point/i.test(selectedShippingMethod.displayName) || (selectedShippingMethod as ShippingMethod & { service_point_input?: string }).service_point_input === "required"));
   useEffect(() => {
     fetch("/api/sendcloud/shipping-methods").then(response => response.ok ? response.json() : []).then(data => setShippingMethods(Array.isArray(data) ? data : data.shipping_methods || data.methods || [])).catch(() => setShippingMethods([]));
   }, []);
   useEffect(() => { if (!shippingMethodId && simplifiedShippingMethods[0]) setShippingMethodId(String(simplifiedShippingMethods[0].id)); }, [shippingMethodId, simplifiedShippingMethods]);
   useEffect(() => {
+    if (!hasShippableItems) return setShippingPrice(0);
     if (!shippingMethodId) return setShippingPrice(0);
     const method = shippingMethods.find(item => String(item.id) === shippingMethodId);
     const configured = method?.countries?.find(country => country.iso_2 === "FR")?.price;
     if (configured != null && configured > 0) return setShippingPrice(configured);
     fetch(`/api/sendcloud/shipping-price?shipping_method_id=${shippingMethodId}&weight=${totalWeight}&to_country=FR`).then(response => response.ok ? response.json() : []).then(data => { const prices = Array.isArray(data) ? data : data.shipping_price || data.prices || [data]; setShippingPrice(Number(prices[0]?.price) || 0); }).catch(() => setShippingPrice(0));
-  }, [shippingMethodId, totalWeight, shippingMethods]);
+  }, [shippingMethodId, totalWeight, shippingMethods, hasShippableItems]);
 
   const removeItem = useCartStore(
     state => state.removeItem,
@@ -726,7 +728,7 @@ const CartPage = () => {
       0,
       subtotalAfterPromo
       - totalGiftBalance,
-    ) + (appliedCoupon?.discountType === "free_shipping" && couponMeetsMinimum ? 0 : shippingPrice) + (giftPackaging ? 1 : 0);
+    ) + (hasShippableItems && !(appliedCoupon?.discountType === "free_shipping" && couponMeetsMinimum) ? shippingPrice : 0) + (giftPackaging ? 1 : 0);
   const loyaltyDiscountPoints = useLoyaltyPoints && auth.currentUser
     ? Math.min(loyaltyPoints, Math.floor(subtotalAfterPromo * 100))
     : 0;
@@ -1847,15 +1849,16 @@ const CartPage = () => {
                 )}
                 <div className="border border-[#C4A77D]/30 bg-[#C4A77D]/5 p-3 text-sm text-[#C4A77D]">✨ Votre achat va vous rapporter <strong>{loyaltyPointsEarned} point(s)</strong>.</div>
 
-                {shippingMethods.length > 0 && <label className="block border-t border-stone-800 pt-3">Livraison ({totalWeight} g)
+                {!hasShippableItems && <div className="border-t border-stone-800 pt-3 text-green-400">Carte cadeau virtuelle : livraison par e-mail offerte</div>}
+                {hasShippableItems && shippingMethods.length > 0 && <label className="block border-t border-stone-800 pt-3">Livraison ({totalWeight} g)
                   <select value={shippingMethodId} onChange={e => setShippingMethodId(e.target.value)} className="w-full mt-2 p-2 bg-black border border-stone-700">
                     <option value="">Choisir un transporteur</option>
                     {simplifiedShippingMethods.map(method => <option key={method.id} value={method.id}>{method.displayName}</option>)}
                   </select>
                 </label>}
-                {shippingPrice > 0 && appliedCoupon?.discountType === "free_shipping" && couponMeetsMinimum ? (
+                {hasShippableItems && shippingPrice > 0 && appliedCoupon?.discountType === "free_shipping" && couponMeetsMinimum ? (
                   <div className="flex justify-between text-green-400"><span>Livraison</span><span>Offerte</span></div>
-                ) : shippingPrice > 0 ? (
+                ) : hasShippableItems && shippingPrice > 0 ? (
                   <div className="flex justify-between"><span>Livraison</span><span>{shippingPrice.toFixed(2)} €</span></div>
                 ) : null}
                 <div className="border-t border-stone-800 pt-3 space-y-2"><label className="flex items-center gap-2"><input type="checkbox" checked={giftPackaging} onChange={e => setGiftPackaging(e.target.checked)} /> Emballage cadeau + carte (+1,00 €)</label>{giftPackaging && <textarea value={giftMessage} onChange={e => setGiftMessage(e.target.value.slice(0, 300))} placeholder="Message à écrire sur la carte" className="w-full p-2 bg-black border border-stone-700" />}</div>
