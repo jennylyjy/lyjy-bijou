@@ -1000,10 +1000,14 @@ function AdminPage() {
     }
   };
 
-  const handleDeleteArticle = async (id: string) => {
-    if (confirm("Voulez-vous vraiment supprimer cet article ?")) {
+  const handleDeleteArticle = async (article: any) => {
+    const confirmation = window.prompt(
+      `Cette action est définitive. Pour confirmer la suppression de « ${article.title || "cet article"} », saisissez SUPPRIMER :`,
+    );
+    if (confirmation !== "SUPPRIMER") return;
+    {
       try {
-        await deleteDoc(doc(db, "articles", id));
+        await deleteDoc(doc(db, "articles", article.id));
         setSuccessMessage("Article supprimé.");
         setTimeout(() => setSuccessMessage(""), 3000);
       } catch (error) {
@@ -1470,7 +1474,7 @@ function AdminPage() {
                             </button>
 
                             <button
-                              onClick={() => handleDeleteArticle(art.id)}
+                              onClick={() => handleDeleteArticle(art)}
                               className="text-red-400 hover:text-red-300 p-2"
                               title="Supprimer l'article"
                             >
