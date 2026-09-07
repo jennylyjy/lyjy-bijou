@@ -972,7 +972,7 @@ const CartPage = () => {
             "preparing",
 
           total:
-            total: totalWithLoyalty,
+            totalWithLoyalty,
             loyaltyPointsUsed: loyaltyDiscountPoints,
             loyaltyPointsEarned,
 
@@ -1108,7 +1108,7 @@ const CartPage = () => {
                         cleanedOrderData.clientName,
 
                       total:
-                        total: totalWithLoyalty,
+                        totalWithLoyalty,
                         loyaltyPointsUsed: loyaltyDiscountPoints,
                         loyaltyPointsEarned,
 
