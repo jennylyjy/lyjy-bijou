@@ -31,7 +31,7 @@ export default function Home() {
     }`}>
       
       <header className={`absolute top-0 left-0 z-20 w-full px-6 py-5 md:px-10 md:py-8 flex items-center justify-between transition-colors duration-500`}>
-        <nav className={`flex items-center gap-8 text-xs tracking-[0.2em] uppercase font-light transition-colors duration-500 ${
+        <nav className={`relative z-10 flex items-center gap-3 md:gap-8 text-[10px] md:text-xs tracking-[0.12em] md:tracking-[0.2em] uppercase font-light transition-colors duration-500 ${
           "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]"
         }`}>
           {currentUser ? (
@@ -50,20 +50,20 @@ export default function Home() {
           )}
         </nav>
 
-        <div className="absolute left-1/2 -translate-x-1/2 top-2 md:top-3">
+        <div className="absolute z-0 left-1/2 -translate-x-1/2 top-2 md:top-3 pointer-events-none">
           <Link href="/">
             <Image
               src="/logo.png"
               alt="LYJY Atelier Bijoux"
               width={230}
               height={85}
-              className="object-contain opacity-95 hover:opacity-100 transition-opacity"
+              className="pointer-events-auto w-[120px] md:w-[230px] h-auto object-contain opacity-95 hover:opacity-100 transition-opacity"
               priority
             />
           </Link>
         </div>
 
-        <div className={`flex items-center gap-8 text-xs tracking-[0.2em] uppercase font-light transition-colors duration-500 ${
+        <div className={`relative z-10 flex items-center gap-3 md:gap-8 text-[10px] md:text-xs tracking-[0.12em] md:tracking-[0.2em] uppercase font-light transition-colors duration-500 ${
           "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]"
         }`}>
           <button 
