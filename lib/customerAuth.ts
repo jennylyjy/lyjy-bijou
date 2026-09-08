@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
@@ -51,7 +51,6 @@ const removeMigratedLegacyUser = (email: string) => {
 
 export async function registerCustomer(data: Omit<CustomerProfile, "uid">, password: string) {
   const credential = await createUserWithEmailAndPassword(auth, data.email.trim().toLowerCase(), password);
-  await sendEmailVerification(credential.user);
   const profile = normalizeProfile(credential.user.uid, data, credential.user.email || data.email);
   await setDoc(doc(db, "users", credential.user.uid), { ...profile, createdAt: new Date().toISOString() });
   storeSafeProfile(profile);
@@ -64,10 +63,6 @@ export async function loginCustomer(email: string, password: string) {
   try {
     const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
     await credential.user.reload();
-    if (!credential.user.emailVerified) {
-      await sendEmailVerification(credential.user).catch(() => undefined);
-      throw new Error("EMAIL_NOT_VERIFIED");
-    }
     const snapshot = await getDoc(doc(db, "users", credential.user.uid));
     const profile = normalizeProfile(credential.user.uid, snapshot.exists() ? snapshot.data() : {}, credential.user.email || normalizedEmail);
     if (!snapshot.exists()) await setDoc(doc(db, "users", credential.user.uid), profile, { merge: true });
@@ -84,7 +79,6 @@ export async function loginCustomer(email: string, password: string) {
     if (!legacyUser) throw firebaseError;
 
     const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-    await sendEmailVerification(credential.user);
     const profile = normalizeProfile(credential.user.uid, legacyUser, normalizedEmail);
     await setDoc(doc(db, "users", credential.user.uid), { ...profile, migratedAt: new Date().toISOString() });
     storeSafeProfile(profile);
