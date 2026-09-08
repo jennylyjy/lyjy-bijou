@@ -76,7 +76,7 @@ export default function ArticleDetailPage() {
       quantity: 1,
       image: selectedVariant?.imageUrl || article.imageUrl || "/logo.png",
       stock: Number(article.quantity) || 0,
-      options: selectedVariant ? { variant: selectedVariant.label } : undefined
+      options: selectedVariant ? { variant: selectedVariant.label, size: selectedVariant.size || undefined } : undefined
     });
     setSuccessMessage("Article ajouté au panier !");
     setTimeout(() => setSuccessMessage(""), 3000);
@@ -189,6 +189,12 @@ export default function ArticleDetailPage() {
                   </button>
                 ))}
               </div>
+              {selectedVariant && (selectedVariant.size || selectedVariant.label) && (
+                <p className="text-xs text-stone-400">
+                  Variante : <span className="text-[#C4A77D]">{selectedVariant.label}</span>
+                  {selectedVariant.size && <> · Taille : <span className="text-[#C4A77D]">{selectedVariant.size}</span></>}
+                </p>
+              )}
             </div>
           )}
         </div>
