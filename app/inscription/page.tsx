@@ -59,7 +59,7 @@ export default function RegisterPage() {
         addressDetails: { street: formData.street, postalCode: formData.postalCode, city: formData.city },
       }, formData.password);
       useCartStore.getState().syncCart();
-      alert("Un e-mail de validation vient de vous être envoyé. Validez votre adresse pour pouvoir vous reconnecter.");
+      alert("Votre compte a bien été créé. Vous pouvez maintenant vous connecter.");
       router.push("/connexion");
     } catch {
       setError("Impossible de créer le compte. Cette adresse e-mail est peut-être déjà utilisée.");
