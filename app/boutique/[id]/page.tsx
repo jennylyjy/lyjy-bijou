@@ -223,6 +223,7 @@ export default function ArticleDetailPage() {
           <div className="border-t border-stone-800 pt-4 space-y-2">
             <h3 className="uppercase text-stone-400 font-medium">Description</h3>
             <p className="text-stone-400 leading-relaxed font-sans">{article.description || "Aucune description pour le moment."}</p>
+            {article.size && <p className="text-stone-400"><span className="uppercase text-[10px] tracking-widest text-stone-500">Taille :</span> {article.size}</p>}
           </div>
 
           {/* 3. Affichage conditionnel : Configurateur si Calendrier, sinon bouton classique */}

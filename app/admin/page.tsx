@@ -71,6 +71,7 @@ function AdminPage() {
   const [articleReduction, setArticleReduction] = useState("0");
   const [articleQuantity, setArticleQuantity] = useState("");
   const [articleWeight, setArticleWeight] = useState("");
+  const [articleSize, setArticleSize] = useState("");
   const [articleCategory, setArticleCategory] = useState("");
   const [articleSubcategory, setArticleSubcategory] = useState("");
   const [articleTheme, setArticleTheme] = useState("");
@@ -783,6 +784,7 @@ function AdminPage() {
         finalPrice: calculatedFinalPrice,
         quantity: totalQuantity,
         weight: parseInt(articleWeight) || 0,
+        size: articleSize.trim(),
         category: articleCategory.toLowerCase(),
         subcategory: articleSubcategory.toLowerCase(),
         theme: articleTheme.toLowerCase(),
@@ -801,6 +803,7 @@ function AdminPage() {
       setArticleReduction("0");
       setArticleQuantity("");
       setArticleWeight("");
+      setArticleSize("");
       setArticleSubcategory("");
       setArticleTheme("");
       setArticleColor("");
@@ -949,6 +952,7 @@ function AdminPage() {
         finalPrice: fPrice,
         quantity: hasVariants ? editedVariants.filter(variant => variant.isAvailable).reduce((total, variant) => total + variant.quantity, 0) : parseInt(editingArticle.quantity) || 0,
         weight: parseInt(editingArticle.weight) || 0,
+        size: String(editingArticle.size || "").trim(),
         category: editingArticle.category.toLowerCase(),
         subcategory: String(editingArticle.subcategory || "").toLowerCase(),
         theme: String(editingArticle.theme || "").toLowerCase(),
@@ -1273,6 +1277,11 @@ function AdminPage() {
                   <div>
                     <label className="block uppercase text-stone-500 mb-1">Poids de l'article (g)</label>
                     <input type="number" min="0" step="1" value={articleWeight} onChange={(e) => setArticleWeight(e.target.value)} placeholder="Ex: 80"
+                      className={`w-full p-3 border text-sm ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-black border-stone-800 text-stone-100"}`} />
+                  </div>
+                  <div>
+                    <label className="block uppercase text-stone-500 mb-1">Taille de l'article</label>
+                    <input type="text" value={articleSize} onChange={(e) => setArticleSize(e.target.value)} placeholder="Ex: Ajustable, 16 cm, Enfant"
                       className={`w-full p-3 border text-sm ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-black border-stone-800 text-stone-100"}`} />
                   </div>
                   <div>
@@ -2494,6 +2503,11 @@ function AdminPage() {
                     <label className="block uppercase text-stone-500 mb-1">Poids (g)</label>
                     <input type="number" min="0" step="1" value={editingArticle.weight || 0}
                       onChange={(e) => setEditingArticle({ ...editingArticle, weight: e.target.value })}
+                      className={`w-full p-3 border ${isDayMode ? "bg-stone-50 border-stone-300" : "bg-black border-stone-800"}`} />
+                  </div>
+                  <div>
+                    <label className="block uppercase text-stone-500 mb-1">Taille</label>
+                    <input type="text" value={editingArticle.size || ""} onChange={(e) => setEditingArticle({ ...editingArticle, size: e.target.value })} placeholder="Ex: Ajustable, 16 cm, Enfant"
                       className={`w-full p-3 border ${isDayMode ? "bg-stone-50 border-stone-300" : "bg-black border-stone-800"}`} />
                   </div>
                 </div>
