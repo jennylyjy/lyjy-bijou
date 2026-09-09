@@ -1055,6 +1055,18 @@ function AdminPage() {
     const search = articleSearchRef.trim().toLowerCase();
     return matchesCategory && (!search || String(article.ref || "").toLowerCase().includes(search));
   });
+  const totalStockQuantity = articles.reduce((total, article) => total + (
+    Array.isArray(article.variants) && article.variants.length > 0
+      ? article.variants.filter((variant: any) => variant.isAvailable !== false).reduce((sum: number, variant: any) => sum + Math.max(0, Number(variant.quantity) || 0), 0)
+      : Math.max(0, Number(article.quantity) || 0)
+  ), 0);
+  const totalStockValue = articles.reduce((total, article) => {
+    const price = Number(article.finalPrice ?? article.price) || 0;
+    const quantity = Array.isArray(article.variants) && article.variants.length > 0
+      ? article.variants.filter((variant: any) => variant.isAvailable !== false).reduce((sum: number, variant: any) => sum + Math.max(0, Number(variant.quantity) || 0), 0)
+      : Math.max(0, Number(article.quantity) || 0);
+    return total + price * quantity;
+  }, 0);
 
   return (
     <main className={`min-h-screen flex flex-col font-sans px-6 py-6 md:px-16 transition-colors duration-500 ${
@@ -1088,7 +1100,7 @@ function AdminPage() {
       <div className="max-w-5xl mx-auto w-full space-y-6">
 
         {/* DASHBOARD STATISTIQUES (KPIs) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
           <div className={`p-5 border space-y-2 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
             <div className="flex justify-between items-center text-stone-500">
               <span className="text-xs uppercase tracking-widest">Chiffre d'Affaires</span>
@@ -1111,6 +1123,24 @@ function AdminPage() {
               <AlertTriangle className="w-4 h-4 text-amber-500" />
             </div>
             <p className="text-2xl font-serif text-amber-500">{lowStockArticles.length} bijou(x)</p>
+          </div>
+
+          <div className={`p-5 border space-y-2 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
+            <div className="flex justify-between items-center text-stone-500">
+              <span className="text-xs uppercase tracking-widest">Stock total</span>
+              <Package className="w-4 h-4 text-[#C4A77D]" />
+            </div>
+            <p className="text-2xl font-serif text-[#C4A77D]">{totalStockQuantity}</p>
+            <p className="text-[10px] uppercase tracking-widest text-stone-500">article(s) disponible(s)</p>
+          </div>
+
+          <div className={`p-5 border space-y-2 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
+            <div className="flex justify-between items-center text-stone-500">
+              <span className="text-xs uppercase tracking-widest">Valeur du stock</span>
+              <Euro className="w-4 h-4 text-[#C4A77D]" />
+            </div>
+            <p className="text-2xl font-serif text-[#C4A77D]">{totalStockValue.toFixed(2)} €</p>
+            <p className="text-[10px] uppercase tracking-widest text-stone-500">au prix client</p>
           </div>
         </div>
         <button type="button" onClick={() => { const now = Date.now(); localStorage.setItem("lyjy_stats_since", String(now)); setStatsSince(now); }} className="text-[10px] uppercase tracking-widest text-stone-500 hover:text-[#C4A77D]">Remettre les statistiques à zéro</button>
