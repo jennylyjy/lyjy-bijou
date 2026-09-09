@@ -37,7 +37,7 @@ export default function SiteSidebar() {
   };
   const clearFilters = () => router.push("/boutique");
 
-  return <aside className="fixed left-0 top-0 bottom-0 z-40 hidden w-64 overflow-y-auto border-r border-stone-800 bg-black px-5 py-7 text-stone-300 lg:block">
+  return <aside className="fixed left-0 top-0 bottom-0 z-40 block w-52 overflow-y-auto border-r border-stone-800 bg-black px-3 py-7 text-stone-300 lg:w-64 lg:px-5">
     <Link href="/boutique" className="mb-8 flex h-28 items-center justify-center overflow-visible"><img src="/logo.png" alt="LYJY" className="h-32 w-32 scale-[1.65] object-contain" /></Link>
     <div className="space-y-2 border-b border-stone-800 pb-5">
       <Link href="/boutique" className="flex items-center gap-2 border border-[#C4A77D] px-3 py-3 text-xs uppercase tracking-widest text-[#C4A77D]"><RotateCcw className="h-4 w-4" /> Toute la boutique</Link>

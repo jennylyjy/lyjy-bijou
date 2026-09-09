@@ -88,3 +88,10 @@ a[href]:focus-visible {
   outline: 2px solid #c4a77d;
   outline-offset: 3px;
 }
+
+@media (max-width: 640px) {
+  .product-card-image img {
+    max-height: 100%;
+    object-fit: cover;
+  }
+}

@@ -154,12 +154,12 @@ export default function BoutiquePage() {
               <Link 
                 key={product.id} 
                 href={`/boutique/${product.id}`}
-                className={`p-6 border flex flex-col justify-between transition-all duration-300 group ${
+                className={`product-card mx-auto w-full max-w-[360px] p-4 md:max-w-none md:p-6 border flex flex-col justify-between transition-all duration-300 group ${
                   isDayMode ? "bg-stone-100 border-stone-200 hover:border-[#C4A77D]" : "bg-stone-950 border-stone-900 hover:border-[#C4A77D]"
                 }`}
               >
                 <div>
-                  <div className="relative w-full h-48 mb-4 flex items-center justify-center bg-stone-900/10 overflow-hidden">
+                  <div className="product-card-image relative w-full h-40 md:h-48 mb-4 flex items-center justify-center bg-stone-900/10 overflow-hidden">
                     <Image
                       src={product.image}
                       alt={product.name}
