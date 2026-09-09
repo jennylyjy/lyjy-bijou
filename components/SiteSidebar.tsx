@@ -39,7 +39,7 @@ export default function SiteSidebar() {
   const clearFilters = () => router.push("/boutique");
 
   return <>
-    <button type="button" aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"} onClick={() => setMobileOpen(!mobileOpen)} className="fixed left-3 top-3 z-[60] border border-[#C4A77D] bg-black/90 p-2 text-[#C4A77D] lg:hidden">
+    <button type="button" aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"} onClick={() => setMobileOpen(!mobileOpen)} className="fixed left-3 top-24 z-[60] border border-[#C4A77D] bg-black/90 p-2 text-[#C4A77D] lg:hidden">
       {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
     </button>
     {mobileOpen && <button aria-label="Fermer le menu" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-black/60 lg:hidden" />}
