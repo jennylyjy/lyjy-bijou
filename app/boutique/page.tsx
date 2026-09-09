@@ -8,7 +8,7 @@ import { useThemeStore } from "@/store/useThemeStore";
 import { useCartStore } from "@/store/useCartStore";
 import { db } from "@/lib/firebase";
 import { collection, doc, onSnapshot } from "firebase/firestore";
-import { CatalogTaxonomy, defaultCatalogTaxonomy, TaxonomyKey, taxonomyLabels } from "@/lib/catalogTaxonomy";
+import { CatalogTaxonomy, defaultCatalogTaxonomy } from "@/lib/catalogTaxonomy";
 
 export default function BoutiquePage() {
   const { isDayMode, toggleDayMode } = useThemeStore();
@@ -25,6 +25,14 @@ export default function BoutiquePage() {
   const [selectedColor, setSelectedColor] = useState("all");
   const [catalogTaxonomy, setCatalogTaxonomy] = useState<CatalogTaxonomy>(defaultCatalogTaxonomy);
   const [notification, setNotification] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setSelectedCategory(params.get("categories") || "all");
+    setSelectedSubcategory(params.get("subcategories") || "all");
+    setSelectedTheme(params.get("themes") || "all");
+    setSelectedColor(params.get("colors") || "all");
+  }, []);
 
   // Récupération dynamique depuis Firestore
   useEffect(() => {
@@ -75,13 +83,6 @@ export default function BoutiquePage() {
     (selectedTheme === "all" || product.theme === selectedTheme) &&
     (selectedColor === "all" || product.color === selectedColor)
   );
-  const filterGroups: Array<{ key: TaxonomyKey; value: string; setter: (value: string) => void }> = [
-    { key: "categories", value: selectedCategory, setter: setSelectedCategory },
-    { key: "subcategories", value: selectedSubcategory, setter: setSelectedSubcategory },
-    { key: "themes", value: selectedTheme, setter: setSelectedTheme },
-    { key: "colors", value: selectedColor, setter: setSelectedColor },
-  ];
-
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -143,17 +144,7 @@ export default function BoutiquePage() {
       )}
 
       <div className="max-w-6xl mx-auto w-full space-y-10">
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 border p-4 ${isDayMode ? "border-stone-200 bg-stone-100" : "border-stone-900 bg-stone-950"}`}>
-          {filterGroups.map(group => (
-            <label key={group.key} className="text-[10px] uppercase tracking-widest text-stone-500">
-              {taxonomyLabels[group.key]}
-              <select value={group.value} onChange={(event) => group.setter(event.target.value)} className={`mt-2 w-full border p-2 text-xs ${isDayMode ? "border-stone-300 bg-white text-stone-900" : "border-stone-800 bg-black text-stone-200"}`}>
-                <option value="all">Tous</option>
-                {catalogTaxonomy[group.key].filter(item => item.isVisible).map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-              </select>
-            </label>
-          ))}
-        </div>
+        <div className="h-2" aria-hidden="true" />
         {filteredProducts.length === 0 ? (
           <p className="text-center text-xs tracking-widest text-stone-500 uppercase py-12">
             Aucun article disponible pour le moment.

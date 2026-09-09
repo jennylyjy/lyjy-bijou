@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useThemeStore } from "@/store/useThemeStore";
 import { useCartStore } from "@/store/useCartStore";
 import "./globals.css";
 import Link from "next/link";
 import GlobalAlert from "@/components/GlobalAlert";
 import PartyLensBanner from "@/components/PartyLensBanner";
+import SiteSidebar from "@/components/SiteSidebar";
 
 export default function RootLayout({
   children,
@@ -15,6 +17,8 @@ export default function RootLayout({
 }) {
   const isDayMode = useThemeStore((state) => state.isDayMode);
   const syncCart = useCartStore((state) => state.syncCart);
+  const pathname = usePathname();
+  const hasSidebar = pathname !== "/" && pathname !== "/mon-compte" && !pathname.startsWith("/admin");
 
   // Synchronise et charge le bon panier dès le chargement de l'application
   useEffect(() => {
@@ -40,7 +44,7 @@ export default function RootLayout({
         isDayMode ? "bg-[#F9F8F6] text-stone-900" : "bg-black text-stone-200"
       }`}>
         <PartyLensBanner />
-        {children}
+        <div className={hasSidebar ? "lg:pl-64" : ""}><Suspense fallback={null}><SiteSidebar /></Suspense>{children}</div>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org", "@type": "Store", name: "LYJY Atelier Bijoux", url: "https://www.lyjy.fr/", logo: "https://www.lyjy.fr/logo.png", image: "https://www.lyjy.fr/lyjy-banner-email.jpg", description: "Bijoux artisanaux et créations uniques faits main par LYJY Atelier.", email: "contact-lyjy@lyjy.fr", address: { "@type": "PostalAddress", addressCountry: "FR" }
         }) }} />
