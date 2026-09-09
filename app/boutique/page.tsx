@@ -107,7 +107,10 @@ export default function BoutiquePage() {
       }`}>
         <div className="w-24" />
         
-        <h1 className="text-lg font-serif tracking-[0.2em] text-[#C4A77D]">Boutique LYJY</h1>
+        <h1 className="flex items-center justify-center gap-3 text-2xl font-serif tracking-[0.25em] text-[#C4A77D] md:text-3xl">
+          <img src="/logo.png" alt="LYJY" className="h-12 w-12 object-contain" />
+          <span className="drop-shadow-[0_0_12px_rgba(196,167,125,0.35)]">Boutique LYJY</span>
+        </h1>
         <p className="sr-only">Bijoux artisanaux faits main, idées cadeaux et créations personnalisées LYJY Atelier.</p>
 
         <div className="flex items-center gap-6">
