@@ -268,6 +268,7 @@ function AdminPage() {
   const visibleStatsOrders = orders.filter(o =>
     o.status !== "cancelled" && (!statsSince || getOrderDateMs(o) >= statsSince)
   );
+  const onlineOrders = orders.filter(o => o.source !== "caisse");
 
   const totalRevenue = visibleStatsOrders
     .reduce((sum, o) => sum + (typeof o.total === "number" ? o.total : parseFloat(o.total) || 0), 0);
@@ -1071,7 +1072,7 @@ function AdminPage() {
     );
   }
 
-  const filteredOrders = orders.filter((o) => o.status === orderSubTab);
+  const filteredOrders = onlineOrders.filter((o) => o.status === orderSubTab);
   const filteredArticles = articles.filter((article) => {
     const matchesCategory = articleFilterCategory === "all" || article.category === articleFilterCategory.toLowerCase();
     const search = articleSearchRef.trim().toLowerCase();
@@ -1245,7 +1246,7 @@ function AdminPage() {
             onClick={() => setActiveTab("orders")}
             className={`pb-2 transition-colors ${activeTab === "orders" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}
           >
-            Commandes ({orders.length})
+            Commandes ({onlineOrders.length})
           </button>
           <button
             onClick={() => setActiveTab("articles")}
@@ -1314,7 +1315,7 @@ function AdminPage() {
                 { id: "cancelled", label: "Annulées", icon: X },
               ].map((sub) => {
                 const IconComponent = sub.icon;
-                const count = orders.filter(o => o.status === sub.id).length;
+                const count = onlineOrders.filter(o => o.status === sub.id).length;
                 return (
                   <button
                     key={sub.id}
