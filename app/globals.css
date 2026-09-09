@@ -63,3 +63,28 @@ html {
 *::-webkit-scrollbar-corner {
   background: #151210;
 }
+
+/* Retour visuel commun pour tous les éléments interactifs */
+button:not(:disabled),
+a[href] {
+  cursor: pointer;
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease,
+    box-shadow 180ms ease, filter 180ms ease, transform 120ms ease;
+}
+
+button:not(:disabled):hover,
+a[href]:hover {
+  filter: brightness(1.22);
+}
+
+button:not(:disabled):active,
+a[href]:active {
+  transform: translateY(1px) scale(0.985);
+  filter: brightness(0.92);
+}
+
+button:not(:disabled):focus-visible,
+a[href]:focus-visible {
+  outline: 2px solid #c4a77d;
+  outline-offset: 3px;
+}
