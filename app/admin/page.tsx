@@ -1055,12 +1055,13 @@ function AdminPage() {
     const search = articleSearchRef.trim().toLowerCase();
     return matchesCategory && (!search || String(article.ref || "").toLowerCase().includes(search));
   });
-  const totalStockQuantity = articles.reduce((total, article) => total + (
+  const stockArticles = articles.filter((article) => !article.isCustomGiftCard && !article.isAdvent && article.category !== "calendrier-avent");
+  const totalStockQuantity = stockArticles.reduce((total, article) => total + (
     Array.isArray(article.variants) && article.variants.length > 0
       ? article.variants.filter((variant: any) => variant.isAvailable !== false).reduce((sum: number, variant: any) => sum + Math.max(0, Number(variant.quantity) || 0), 0)
       : Math.max(0, Number(article.quantity) || 0)
   ), 0);
-  const totalStockValue = articles.reduce((total, article) => {
+  const totalStockValue = stockArticles.reduce((total, article) => {
     const price = Number(article.finalPrice ?? article.price) || 0;
     const quantity = Array.isArray(article.variants) && article.variants.length > 0
       ? article.variants.filter((variant: any) => variant.isAvailable !== false).reduce((sum: number, variant: any) => sum + Math.max(0, Number(variant.quantity) || 0), 0)
