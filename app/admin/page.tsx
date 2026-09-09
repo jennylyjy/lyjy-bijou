@@ -1087,7 +1087,7 @@ function AdminPage() {
     setCashCart((current) => {
       const existing = current.find((item) => item.key === key);
       if (existing) return current.map((item) => item.key === key ? { ...item, quantity: item.quantity + 1 } : item);
-      return [...current, { key, articleId: article.id, title: article.title, price: Number(article.finalPrice ?? article.price) || 0, quantity: 1, variantLabel: variant?.label || "", variantSize: variant?.size || "" }];
+      return [...current, { key, articleId: article.id, title: article.title, ref: article.ref || "", category: article.category || "", price: Number(article.finalPrice ?? article.price) || 0, quantity: 1, variantLabel: variant?.label || "", variantSize: variant?.size || "" }];
     });
   };
   const validateCashSale = async () => {
@@ -1113,14 +1113,15 @@ function AdminPage() {
           }
         }
       });
-      const sale = { items: cashCart, total: cashTotal, paymentMethod: cashPaymentMethod, status: "validated", source: "caisse", createdAt: new Date().toISOString() };
+      const sale = { ticketNumber: `CAISSE-${Date.now().toString().slice(-6)}`, items: cashCart, total: cashTotal, paymentMethod: cashPaymentMethod, amountReceived: cashPaymentMethod === "Espèces" ? Number(cashAmountReceived) || cashTotal : cashTotal, change: cashPaymentMethod === "Espèces" ? cashChange : 0, status: "validated", source: "caisse", createdAt: new Date().toISOString() };
       await addDoc(collection(db, "orders"), sale);
       setLastCashSale(sale);
       setCashCart([]); setCashAmountReceived(""); setCashPaymentOpen(false); setSuccessMessage("Vente enregistrée et stock mis à jour."); setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error: any) { alert(error.message || "Impossible d'enregistrer la vente."); }
     finally { setIsCashSubmitting(false); }
   };
-  const ticketText = (sale: any) => `LYJY ATELIER\nTICKET DE CAISSE\n--------------------\n${sale.items.map((item: any) => `${item.title}${item.variantLabel ? ` - ${item.variantLabel}` : ""} x${item.quantity} ${(item.price * item.quantity).toFixed(2)} €`).join("\n")}\n--------------------\nTOTAL : ${Number(sale.total).toFixed(2)} €\nPaiement : ${sale.paymentMethod}\nMerci pour votre achat !`;
+  const ticketText = (sale: any) => { const date = new Date(sale.createdAt); return `LYJY ATELIER\nTICKET DE CAISSE\nN° ${sale.ticketNumber}\n${date.toLocaleDateString("fr-FR")} ${date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}\n------------------------------\n${sale.items.map((item: any) => `${item.title}\nRéf : ${item.ref || "—"}${item.variantLabel ? ` | Variante : ${item.variantLabel}` : ""}${item.variantSize ? ` | Taille : ${item.variantSize}` : ""}\n${item.quantity} x ${Number(item.price).toFixed(2)} € = ${(item.price * item.quantity).toFixed(2)} €`).join("\n------------------------------\n")}\n------------------------------\nTOTAL : ${Number(sale.total).toFixed(2)} €\nPaiement : ${sale.paymentMethod}\nMontant reçu : ${Number(sale.amountReceived).toFixed(2)} €\nMonnaie rendue : ${Number(sale.change).toFixed(2)} €\nMerci pour votre achat !`;
+  };
   const shareCashTicket = async () => {
     if (!lastCashSale) return;
     const text = ticketText(lastCashSale);
