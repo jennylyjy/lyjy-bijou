@@ -149,17 +149,17 @@ export default function BoutiquePage() {
             Aucun article disponible pour le moment.
           </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-8">
             {filteredProducts.map((product) => (
               <Link 
                 key={product.id} 
                 href={`/boutique/${product.id}`}
-                className={`product-card mx-auto w-full max-w-[360px] p-4 md:max-w-none md:p-6 border flex flex-col justify-between transition-all duration-300 group ${
+                className={`product-card mx-auto w-full max-w-none p-2 md:p-6 border flex flex-col justify-between transition-all duration-300 group ${
                   isDayMode ? "bg-stone-100 border-stone-200 hover:border-[#C4A77D]" : "bg-stone-950 border-stone-900 hover:border-[#C4A77D]"
                 }`}
               >
                 <div>
-                  <div className="product-card-image relative w-full h-40 md:h-48 mb-4 flex items-center justify-center bg-stone-900/10 overflow-hidden">
+                  <div className="product-card-image relative w-full h-24 sm:h-36 md:h-48 mb-2 md:mb-4 flex items-center justify-center bg-stone-900/10 overflow-hidden">
                     <Image
                       src={product.image}
                       alt={product.name}
@@ -174,10 +174,10 @@ export default function BoutiquePage() {
                     )}
                   </div>
 
-                  <div className="space-y-2 mb-6">
-                    <h3 className="font-serif text-sm tracking-wider text-[#C4A77D]">{product.name}</h3>
+                  <div className="space-y-1 mb-3 md:mb-6">
+                    <h3 className="font-serif text-[10px] leading-tight sm:text-xs md:text-sm tracking-wider text-[#C4A77D]">{product.name}</h3>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-light">
+                      <p className="text-[10px] sm:text-xs md:text-sm font-light">
                         {product.isCustomGiftCard
                           ? `De ${(Number(product.giftCardConfig?.minAmount) || product.price).toFixed(2)} € à ${(Number(product.giftCardConfig?.maxAmount) || product.price).toFixed(2)} €`
                           : `${product.price.toFixed(2)} €`}
@@ -191,7 +191,7 @@ export default function BoutiquePage() {
 
                 <button
                   onClick={(e) => handleAddToCart(product, e)}
-                  className="w-full border border-[#C4A77D] text-[#C4A77D] py-3 text-xs tracking-[0.2em] uppercase hover:bg-[#C4A77D] hover:text-black transition-all duration-300 font-light"
+                  className="w-full border border-[#C4A77D] text-[#C4A77D] py-2 md:py-3 text-[8px] sm:text-[10px] md:text-xs tracking-wider md:tracking-[0.2em] uppercase hover:bg-[#C4A77D] hover:text-black transition-all duration-300 font-light"
                 >
                   Ajouter au panier
                 </button>
