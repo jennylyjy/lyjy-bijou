@@ -241,14 +241,14 @@ export default function AccountPage() {
         }`}
       >
         <Link
-          href="/"
+          href="/boutique"
           className={`flex items-center gap-2 text-xs tracking-widest uppercase transition-colors ${
             isDayMode
               ? "text-stone-600 hover:text-[#C4A77D]"
               : "text-stone-400 hover:text-[#C4A77D]"
           }`}
         >
-          <ArrowLeft className="w-4 h-4" /> Accueil
+          <ArrowLeft className="w-4 h-4" /> Retour boutique
         </Link>
 
         <h1 className="text-lg font-serif tracking-[0.2em] text-[#C4A77D]">

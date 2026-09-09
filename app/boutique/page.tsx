@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Sun, Moon, ShoppingBag, Check } from "lucide-react";
+import { Sun, Moon, ShoppingBag, Check } from "lucide-react";
 import { useThemeStore } from "@/store/useThemeStore";
 import { useCartStore } from "@/store/useCartStore";
 import { db } from "@/lib/firebase";
@@ -105,11 +105,7 @@ export default function BoutiquePage() {
       <header className={`flex items-center justify-between border-b pb-6 mb-10 transition-colors duration-500 ${
         isDayMode ? "border-stone-200" : "border-stone-900"
       }`}>
-        <Link href="/" className={`flex items-center gap-2 text-xs tracking-widest uppercase transition-colors ${
-          isDayMode ? "text-stone-600 hover:text-[#C4A77D]" : "text-stone-400 hover:text-[#C4A77D]"
-        }`}>
-          <ArrowLeft className="w-4 h-4" /> Accueil
-        </Link>
+        <div className="w-24" />
         
         <h1 className="text-lg font-serif tracking-[0.2em] text-[#C4A77D]">Boutique LYJY</h1>
         <p className="sr-only">Bijoux artisanaux faits main, idées cadeaux et créations personnalisées LYJY Atelier.</p>

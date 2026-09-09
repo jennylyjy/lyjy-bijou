@@ -43,13 +43,13 @@ export default function RootLayout({
       <body className={`min-h-screen font-sans transition-colors duration-500 ${
         isDayMode ? "bg-[#F9F8F6] text-stone-900" : "bg-black text-stone-200"
       }`}>
-        <PartyLensBanner />
+        <div className={hasSidebar ? "lg:ml-64" : ""}><PartyLensBanner /></div>
         <div className={hasSidebar ? "lg:pl-64" : ""}><Suspense fallback={null}><SiteSidebar /></Suspense>{children}</div>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org", "@type": "Store", name: "LYJY Atelier Bijoux", url: "https://www.lyjy.fr/", logo: "https://www.lyjy.fr/logo.png", image: "https://www.lyjy.fr/lyjy-banner-email.jpg", description: "Bijoux artisanaux et créations uniques faits main par LYJY Atelier.", email: "contact-lyjy@lyjy.fr", address: { "@type": "PostalAddress", addressCountry: "FR" }
         }) }} />
         <GlobalAlert />
-        <footer className="fixed bottom-0 left-0 right-0 z-20 flex justify-center gap-6 py-2 bg-black/90 text-[10px] uppercase tracking-widest text-stone-400"><Link href="/contact">Contact</Link><Link href="/cgv-cgu">CGV-CGU</Link></footer>
+        {(pathname === "/" || pathname === "/mon-compte") && <footer className="fixed bottom-0 left-0 right-0 z-20 flex justify-center gap-6 py-2 bg-black/90 text-[10px] uppercase tracking-widest text-stone-400"><Link href="/contact">Contact</Link><Link href="/cgv-cgu">CGV-CGU</Link></footer>}
       </body>
     </html>
   );
