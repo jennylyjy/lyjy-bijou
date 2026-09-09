@@ -7,7 +7,7 @@ import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { defaultCatalogTaxonomy, CatalogTaxonomy, TaxonomyKey, taxonomyLabels } from "@/lib/catalogTaxonomy";
-import { ShoppingBag, UserRound, LogIn, UserPlus, RotateCcw } from "lucide-react";
+import { ShoppingBag, UserRound, LogIn, UserPlus, RotateCcw, Menu, X } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 
 const filterKeys: TaxonomyKey[] = ["categories", "subcategories", "themes", "colors"];
@@ -19,6 +19,7 @@ export default function SiteSidebar() {
   const cartItems = useCartStore((state) => state.items);
   const [user, setUser] = useState(auth.currentUser);
   const [taxonomy, setTaxonomy] = useState<CatalogTaxonomy>(defaultCatalogTaxonomy);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const visible = pathname !== "/" && pathname !== "/mon-compte" && !pathname.startsWith("/admin");
 
   useEffect(() => onAuthStateChanged(auth, setUser), []);
@@ -37,7 +38,12 @@ export default function SiteSidebar() {
   };
   const clearFilters = () => router.push("/boutique");
 
-  return <aside className="fixed left-0 top-0 bottom-0 z-40 block w-52 overflow-y-auto border-r border-stone-800 bg-black px-3 py-7 text-stone-300 lg:w-64 lg:px-5">
+  return <>
+    <button type="button" aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"} onClick={() => setMobileOpen(!mobileOpen)} className="fixed left-3 top-3 z-[60] border border-[#C4A77D] bg-black/90 p-2 text-[#C4A77D] lg:hidden">
+      {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+    </button>
+    {mobileOpen && <button aria-label="Fermer le menu" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-black/60 lg:hidden" />}
+    <aside className={`fixed left-0 top-0 bottom-0 z-50 w-52 overflow-y-auto border-r border-stone-800 bg-black px-3 py-7 text-stone-300 transition-transform duration-300 lg:w-64 lg:translate-x-0 lg:px-5 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
     <Link href="/boutique" className="mb-8 flex h-28 items-center justify-center overflow-visible"><img src="/logo.png" alt="LYJY" className="h-32 w-32 scale-[1.65] object-contain" /></Link>
     <div className="space-y-2 border-b border-stone-800 pb-5">
       <Link href="/boutique" className="flex items-center gap-2 border border-[#C4A77D] px-3 py-3 text-xs uppercase tracking-widest text-[#C4A77D]"><RotateCcw className="h-4 w-4" /> Toute la boutique</Link>
@@ -55,5 +61,6 @@ export default function SiteSidebar() {
       </div>)}
     </div>
     <div className="space-y-3 border-t border-stone-800 pt-5 text-xs uppercase tracking-widest"><Link href="/contact" className="block hover:text-[#C4A77D]">Contact</Link><Link href="/cgv-cgu" className="block hover:text-[#C4A77D]">CGV-CGU</Link></div>
-  </aside>;
+    </aside>
+  </>;
 }

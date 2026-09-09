@@ -43,8 +43,8 @@ export default function RootLayout({
       <body className={`min-h-screen font-sans transition-colors duration-500 ${
         isDayMode ? "bg-[#F9F8F6] text-stone-900" : "bg-black text-stone-200"
       }`}>
-        <div className={hasSidebar ? "ml-52 lg:ml-64" : ""}><PartyLensBanner /></div>
-        <div className={hasSidebar ? "pl-52 lg:pl-64" : ""}><Suspense fallback={null}><SiteSidebar /></Suspense>{children}</div>
+        <div className={hasSidebar ? "lg:ml-64" : ""}><PartyLensBanner /></div>
+        <div className={hasSidebar ? "lg:pl-64" : ""}><Suspense fallback={null}><SiteSidebar /></Suspense>{children}</div>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org", "@type": "Store", name: "LYJY Atelier Bijoux", url: "https://www.lyjy.fr/", logo: "https://www.lyjy.fr/logo.png", image: "https://www.lyjy.fr/lyjy-banner-email.jpg", description: "Bijoux artisanaux et créations uniques faits main par LYJY Atelier.", email: "contact-lyjy@lyjy.fr", address: { "@type": "PostalAddress", addressCountry: "FR" }
         }) }} />
