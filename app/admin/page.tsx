@@ -257,8 +257,19 @@ function AdminPage() {
     }
   };
 
-  const totalRevenue = orders
-    .filter(o => o.status !== "cancelled" && (!statsSince || new Date(o.createdAt || o.date || 0).getTime() >= statsSince))
+  const getOrderDateMs = (order: any) => {
+    const value = order?.createdAt || order?.date;
+    if (value?.toDate) return value.toDate().getTime();
+    if (typeof value?.seconds === "number") return value.seconds * 1000;
+    const parsed = new Date(value || 0).getTime();
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const visibleStatsOrders = orders.filter(o =>
+    o.status !== "cancelled" && (!statsSince || getOrderDateMs(o) >= statsSince)
+  );
+
+  const totalRevenue = visibleStatsOrders
     .reduce((sum, o) => sum + (typeof o.total === "number" ? o.total : parseFloat(o.total) || 0), 0);
 
   const getArticleStock = (article: any) => {
@@ -1184,7 +1195,7 @@ function AdminPage() {
               <span className="text-xs uppercase tracking-widest">Commandes Validées</span>
               <TrendingUp className="w-4 h-4 text-green-400" />
             </div>
-            <p className="text-2xl font-serif">{orders.filter(o => o.status !== "cancelled" && (!statsSince || new Date(o.createdAt || o.date || 0).getTime() >= statsSince)).length}</p>
+            <p className="text-2xl font-serif">{visibleStatsOrders.length}</p>
           </div>
 
           <div className={`p-5 border space-y-2 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
@@ -1213,7 +1224,20 @@ function AdminPage() {
             <p className="text-[10px] uppercase tracking-widest text-stone-500">au prix client</p>
           </div>
         </div>
-        <button type="button" onClick={() => { const now = Date.now(); localStorage.setItem("lyjy_stats_since", String(now)); setStatsSince(now); }} className="text-[10px] uppercase tracking-widest text-stone-500 hover:text-[#C4A77D]">Remettre les statistiques à zéro</button>
+        <button
+          type="button"
+          onClick={() => {
+            if (!window.confirm("Remettre à zéro le chiffre d’affaires et le nombre de commandes validées ? Les commandes resteront conservées dans l’onglet Commandes.")) return;
+            const now = Date.now();
+            localStorage.setItem("lyjy_stats_since", String(now));
+            setStatsSince(now);
+            setSuccessMessage("Statistiques remises à zéro.");
+            setTimeout(() => setSuccessMessage(""), 3000);
+          }}
+          className="text-[10px] uppercase tracking-widest text-stone-500 hover:text-[#C4A77D]"
+        >
+          Remettre les statistiques à zéro
+        </button>
 
         {/* NAVIGATION DES ONGLETS */}
         <div className="flex gap-4 border-b border-stone-800 pb-4 text-xs tracking-[0.2em] uppercase flex-wrap">
