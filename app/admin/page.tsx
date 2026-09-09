@@ -88,6 +88,8 @@ function AdminPage() {
   const [cashPaymentMethod, setCashPaymentMethod] = useState("Espèces");
   const [cashAmountReceived, setCashAmountReceived] = useState("");
   const [cashPaymentOpen, setCashPaymentOpen] = useState(false);
+  const [lastCashSale, setLastCashSale] = useState<any | null>(null);
+  const [cashTicketEmail, setCashTicketEmail] = useState("");
   const [isCashSubmitting, setIsCashSubmitting] = useState(false);
 
   const [editingArticle, setEditingArticle] = useState<any | null>(null);
@@ -1111,10 +1113,28 @@ function AdminPage() {
           }
         }
       });
-      await addDoc(collection(db, "orders"), { items: cashCart, total: cashTotal, paymentMethod: cashPaymentMethod, status: "validated", source: "caisse", createdAt: new Date().toISOString() });
+      const sale = { items: cashCart, total: cashTotal, paymentMethod: cashPaymentMethod, status: "validated", source: "caisse", createdAt: new Date().toISOString() };
+      await addDoc(collection(db, "orders"), sale);
+      setLastCashSale(sale);
       setCashCart([]); setCashAmountReceived(""); setCashPaymentOpen(false); setSuccessMessage("Vente enregistrée et stock mis à jour."); setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error: any) { alert(error.message || "Impossible d'enregistrer la vente."); }
     finally { setIsCashSubmitting(false); }
+  };
+  const ticketText = (sale: any) => `LYJY ATELIER\nTICKET DE CAISSE\n--------------------\n${sale.items.map((item: any) => `${item.title}${item.variantLabel ? ` - ${item.variantLabel}` : ""} x${item.quantity} ${(item.price * item.quantity).toFixed(2)} €`).join("\n")}\n--------------------\nTOTAL : ${Number(sale.total).toFixed(2)} €\nPaiement : ${sale.paymentMethod}\nMerci pour votre achat !`;
+  const shareCashTicket = async () => {
+    if (!lastCashSale) return;
+    const text = ticketText(lastCashSale);
+    const file = new File([text], "ticket-lyjy.txt", { type: "text/plain" });
+    try {
+      if (navigator.share) await navigator.share({ title: "Ticket LYJY", text, files: [file] });
+      else window.open(`mailto:?subject=Ticket LYJY&body=${encodeURIComponent(text)}`, "_blank");
+    } catch (error: any) { if (error?.name !== "AbortError") alert("Le partage du ticket n'est pas disponible sur cet appareil."); }
+  };
+  const emailCashTicket = async () => {
+    if (!lastCashSale || !cashTicketEmail.trim()) return;
+    const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "ORDER_CONFIRMATION", email: cashTicketEmail.trim(), orderDetails: { id: "CAISSE", clientName: "Client comptoir", total: lastCashSale.total, items: lastCashSale.items } }) });
+    if (!response.ok) throw new Error("Impossible d'envoyer le ticket.");
+    setSuccessMessage("Ticket envoyé par e-mail."); setCashTicketEmail("");
   };
 
   return (
@@ -1240,6 +1260,8 @@ function AdminPage() {
             <Check className="w-4 h-4" /> {successMessage}
           </div>
         )}
+
+        {activeTab === "cashier" && lastCashSale && <div className="border border-green-500/30 bg-green-500/10 p-4 space-y-3"><p className="text-sm text-green-400">Vente terminée. Que souhaitez-vous faire du ticket ?</p><div className="flex flex-col md:flex-row gap-2"><button type="button" onClick={shareCashTicket} className="border border-[#C4A77D] px-4 py-2 text-xs uppercase">Partager avec Fun Print</button><input type="email" value={cashTicketEmail} onChange={(e) => setCashTicketEmail(e.target.value)} placeholder="E-mail du client" className="flex-1 border border-stone-700 bg-black px-3 py-2 text-sm" /><button type="button" onClick={() => emailCashTicket().catch((error) => alert(error.message))} disabled={!cashTicketEmail.trim()} className="bg-[#C4A77D] px-4 py-2 text-xs uppercase text-black disabled:opacity-50">Envoyer par e-mail</button></div></div>}
 
         {activeTab === "tutorial" && <AdminTutorial />}
 
