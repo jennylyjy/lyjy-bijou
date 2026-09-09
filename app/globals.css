@@ -26,3 +26,40 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Barres de défilement personnalisées LYJY */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #c4a77d #151210;
+  scroll-behavior: smooth;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c4a77d #151210;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #151210;
+  border-left: 1px solid rgba(196, 167, 125, 0.12);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #e2c895, #a78351);
+  border: 2px solid #151210;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 214, 0.3), 0 0 8px rgba(196, 167, 125, 0.25);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f0d9a8, #c4a77d);
+}
+
+*::-webkit-scrollbar-corner {
+  background: #151210;
+}
