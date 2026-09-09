@@ -916,7 +916,9 @@ function AdminPage() {
           const downloadUrl = await getDownloadURL(snapshot.ref);
           newUploadedUrls.push(downloadUrl);
         }
-        imageUrls = [...imageUrls, ...newUploadedUrls];
+        // La première nouvelle photo devient la photo principale ; les suivantes
+        // sont ajoutées à la suite de la galerie existante.
+        imageUrls = [newUploadedUrls[0], ...imageUrls.slice(1), ...newUploadedUrls.slice(1)];
       }
 
       const pPrice = parseFloat(editingArticle.price) || 0;
@@ -2544,7 +2546,7 @@ function AdminPage() {
                 </div>
 
                 <div>
-                  <label className="block uppercase text-stone-500 mb-1">Ajouter d'autres photos</label>
+                  <label className="block uppercase text-stone-500 mb-1">Remplacer la photo principale / ajouter des photos</label>
                   <input 
                     type="file" accept="image/*" multiple onChange={(e) => setEditImageFiles(e.target.files)}
                     className="w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:bg-[#C4A77D] file:text-black"
