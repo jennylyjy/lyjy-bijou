@@ -91,6 +91,7 @@ function AdminPage() {
   const [lastCashSale, setLastCashSale] = useState<any | null>(null);
   const [cashTicketEmail, setCashTicketEmail] = useState("");
   const [isCashSubmitting, setIsCashSubmitting] = useState(false);
+  const [cashSession, setCashSession] = useState<any>({ status: "closed" });
 
   const [editingArticle, setEditingArticle] = useState<any | null>(null);
   const [editImageFiles, setEditImageFiles] = useState<FileList | null>(null);
@@ -161,6 +162,18 @@ function AdminPage() {
   };
 
   // Suivi Auth Firebase
+  useEffect(() => {
+    const savedCashSession = localStorage.getItem("lyjy_cash_session");
+    if (savedCashSession) {
+      try { setCashSession(JSON.parse(savedCashSession)); } catch { localStorage.removeItem("lyjy_cash_session"); }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (cashSession?.status === "closed") localStorage.removeItem("lyjy_cash_session");
+    else localStorage.setItem("lyjy_cash_session", JSON.stringify(cashSession));
+  }, [cashSession]);
+
   useEffect(() => {
     setStatsSince(Number(localStorage.getItem("lyjy_stats_since") || 0));
   }, []);
@@ -1104,6 +1117,7 @@ function AdminPage() {
   };
   const validateCashSale = async () => {
     if (!cashCart.length || isCashSubmitting) return;
+    if (cashSession?.status !== "open") return alert("Ouvrez la caisse avant d'enregistrer une vente.");
     setIsCashSubmitting(true);
     try {
       await runTransaction(db, async (transaction) => {
@@ -1148,6 +1162,48 @@ function AdminPage() {
     const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "ORDER_CONFIRMATION", email: cashTicketEmail.trim(), orderDetails: { id: "CAISSE", clientName: "Client comptoir", total: lastCashSale.total, items: lastCashSale.items } }) });
     if (!response.ok) throw new Error("Impossible d'envoyer le ticket.");
     setSuccessMessage("Ticket envoyé par e-mail."); setCashTicketEmail("");
+  };
+  const openCashRegister = () => {
+    if (cashSession?.status !== "closed") return;
+    const code = window.prompt("Créez le code caisse du jour :");
+    if (!code?.trim()) return;
+    const openingCash = Number(window.prompt("Montant de monnaie dans la caisse à l'ouverture (€) :", "0") || 0);
+    if (!Number.isFinite(openingCash) || openingCash < 0) return alert("Montant invalide.");
+    setCashSession({ status: "open", code: code.trim(), openingCash, openedAt: new Date().toISOString() });
+    setSuccessMessage("Caisse ouverte."); setTimeout(() => setSuccessMessage(""), 3000);
+  };
+  const toggleCashPause = () => {
+    if (cashSession?.status === "paused") {
+      const code = window.prompt("Code caisse pour reprendre :");
+      if (code !== cashSession.code) return alert("Code caisse incorrect.");
+      setCashSession({ ...cashSession, status: "open", resumedAt: new Date().toISOString() });
+      return;
+    }
+    if (cashSession?.status === "open") setCashSession({ ...cashSession, status: "paused", pausedAt: new Date().toISOString() });
+  };
+  const closeCashRegister = () => {
+    if (cashSession?.status !== "open" && cashSession?.status !== "paused") return;
+    const code = window.prompt("Code caisse pour clôturer :");
+    if (code !== cashSession.code) return alert("Code caisse incorrect.");
+    const finalCash = Number(window.prompt("Comptage de la monnaie présente en caisse à la fermeture (€) :", "0") || 0);
+    if (!Number.isFinite(finalCash) || finalCash < 0) return alert("Montant invalide.");
+    const today = new Date().toDateString();
+    const daySales = orders.filter(order => order.source === "caisse" && new Date(order.createdAt || 0).toDateString() === today);
+    const byMethod = daySales.reduce((summary: any, sale: any) => {
+      summary[sale.paymentMethod || "Autre"] = (summary[sale.paymentMethod || "Autre"] || 0) + (Number(sale.total) || 0);
+      return summary;
+    }, {});
+    const total = daySales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0);
+    const cashSales = byMethod["Espèces"] || 0;
+    const expectedCash = Number(cashSession.openingCash || 0) + cashSales;
+    const reportRows = daySales.map((sale: any) => `<tr><td>${new Date(sale.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</td><td>${sale.ticketNumber}</td><td>${sale.items.map((item: any) => `${item.title}${item.ref ? ` (${item.ref})` : ""} x${item.quantity}`).join("<br>")}</td><td>${sale.paymentMethod}</td><td>${Number(sale.total).toFixed(2)} €</td></tr>`).join("");
+    const reportWindow = window.open("", "_blank", "width=900,height=700");
+    if (reportWindow) {
+      reportWindow.document.write(`<!doctype html><html><head><title>Clôture caisse LYJY</title><style>body{font-family:Arial,sans-serif;padding:32px;color:#222}h1{color:#9a773f}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:12px}th{background:#eee}.totals{margin-top:24px;line-height:1.8}</style></head><body><h1>LYJY ATELIER — Clôture de caisse</h1><p>Date : ${new Date().toLocaleString("fr-FR")}</p><p>Ouverture : ${new Date(cashSession.openedAt).toLocaleString("fr-FR")}</p><table><thead><tr><th>Heure</th><th>Ticket</th><th>Articles / références</th><th>Paiement</th><th>Total</th></tr></thead><tbody>${reportRows || `<tr><td colspan="5">Aucune vente caisse aujourd'hui</td></tr>`}</tbody></table><div class="totals"><strong>Total ventes : ${total.toFixed(2)} €</strong><br>${Object.entries(byMethod).map(([method, amount]) => `${method} : ${(amount as number).toFixed(2)} €`).join("<br>")}<br>Monnaie ouverture : ${Number(cashSession.openingCash || 0).toFixed(2)} €<br>Espèces attendues : ${expectedCash.toFixed(2)} €<br>Espèces comptées : ${finalCash.toFixed(2)} €<br>Écart de caisse : ${(finalCash - expectedCash).toFixed(2)} €</div><script>window.onload=()=>window.print()</script></body></html>`);
+      reportWindow.document.close();
+    }
+    setCashSession({ status: "closed", closedAt: new Date().toISOString(), finalCash, expectedCash });
+    setSuccessMessage("Caisse clôturée et récapitulatif prêt à enregistrer en PDF."); setTimeout(() => setSuccessMessage(""), 4000);
   };
 
   return (
@@ -1294,6 +1350,15 @@ function AdminPage() {
         {activeTab === "cashier" && <section className={`p-6 border grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
           <div>
             <h2 className="font-serif text-2xl text-[#C4A77D] mb-4">Caisse enregistreuse</h2>
+            <div className="mb-5 flex flex-wrap items-center gap-2 border border-stone-800 p-3">
+              <span className={`mr-2 text-xs uppercase tracking-widest ${cashSession?.status === "open" ? "text-green-400" : cashSession?.status === "paused" ? "text-amber-400" : "text-red-400"}`}>
+                Caisse : {cashSession?.status === "open" ? "ouverte" : cashSession?.status === "paused" ? "en pause" : "fermée"}
+              </span>
+              {cashSession?.status === "closed" && <button type="button" onClick={openCashRegister} className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Ouverture caisse</button>}
+              {(cashSession?.status === "open" || cashSession?.status === "paused") && <button type="button" onClick={toggleCashPause} className="border border-stone-600 px-3 py-2 text-xs uppercase">{cashSession.status === "paused" ? "Reprendre" : "Pause"}</button>}
+              {(cashSession?.status === "open" || cashSession?.status === "paused") && <button type="button" onClick={closeCashRegister} className="border border-red-500/60 px-3 py-2 text-xs uppercase text-red-300">Clôture caisse</button>}
+              {cashSession?.status !== "closed" && <span className="text-xs text-stone-500">Fond initial : {Number(cashSession.openingCash || 0).toFixed(2)} €</span>}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-3 mb-4"><input value={cashSearch} onChange={(e) => setCashSearch(e.target.value)} placeholder="Rechercher par article ou référence..." className={`w-full p-3 border ${isDayMode ? "bg-white border-stone-300" : "bg-black border-stone-800"}`} /><select value={cashCategory} onChange={(e) => setCashCategory(e.target.value)} className={`w-full p-3 border ${isDayMode ? "bg-white border-stone-300" : "bg-black border-stone-800"}`}><option value="all">Toutes les catégories</option>{catalogTaxonomy.categories.filter(item => item.isVisible).map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[520px] overflow-y-auto pr-2">{cashProducts.map((article: any) => <div key={article.id} className="border border-stone-800 p-3 space-y-2"><img src={article.imageUrl || article.imageUrls?.[0] || "/logo.png"} alt={article.title} className="w-full h-28 object-cover" /><p className="text-[#C4A77D]">{article.title}</p><p className="text-[10px] text-stone-500">Réf. : {article.ref || "—"}</p><p className="text-xs text-stone-500">Stock : {getArticleStock(article)} · {(Number(article.finalPrice ?? article.price) || 0).toFixed(2)} €</p>{Array.isArray(article.variants) && article.variants.filter((variant: any) => variant.isAvailable !== false && Number(variant.quantity) > 0).length > 0 ? <div className="flex flex-wrap gap-2">{article.variants.filter((variant: any) => variant.isAvailable !== false && Number(variant.quantity) > 0).map((variant: any) => <button key={variant.label} type="button" onClick={() => addCashItem(article, variant)} className="border border-[#C4A77D]/50 px-2 py-1 text-xs">{variant.label}{variant.size ? ` · ${variant.size}` : ""}</button>)}</div> : <button type="button" onClick={() => addCashItem(article)} className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Ajouter</button>}</div>)}</div>
           </div>
