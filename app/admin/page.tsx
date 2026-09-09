@@ -10,7 +10,7 @@ import {
 import { useThemeStore } from "../../store/useThemeStore";
 import { db, storage, auth } from "../../lib/firebase";
 import { 
-  collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDocs, where, setDoc, getDoc, writeBatch 
+  collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDocs, where, setDoc, getDoc, writeBatch, runTransaction 
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, User } from "firebase/auth";
@@ -82,6 +82,10 @@ function AdminPage() {
   const [articleFilterCategory, setArticleFilterCategory] = useState("all");
   const [articleSearchRef, setArticleSearchRef] = useState("");
   const [isSubmittingArticle, setIsSubmittingArticle] = useState(false);
+  const [cashSearch, setCashSearch] = useState("");
+  const [cashCart, setCashCart] = useState<any[]>([]);
+  const [cashPaymentMethod, setCashPaymentMethod] = useState("Espèces");
+  const [isCashSubmitting, setIsCashSubmitting] = useState(false);
 
   const [editingArticle, setEditingArticle] = useState<any | null>(null);
   const [editImageFiles, setEditImageFiles] = useState<FileList | null>(null);
@@ -1070,6 +1074,44 @@ function AdminPage() {
       : Math.max(0, Number(article.quantity) || 0);
     return total + price * quantity;
   }, 0);
+  const cashProducts = articles.filter((article) => article.isAvailable !== false && !article.isCustomGiftCard && !article.isAdvent && article.category !== "calendrier-avent" && getArticleStock(article) > 0 && String(article.title || "").toLowerCase().includes(cashSearch.trim().toLowerCase()));
+  const cashTotal = cashCart.reduce((total, item) => total + item.price * item.quantity, 0);
+  const addCashItem = (article: any, variant: any = null) => {
+    const key = `${article.id}-${variant?.label || "article"}`;
+    setCashCart((current) => {
+      const existing = current.find((item) => item.key === key);
+      if (existing) return current.map((item) => item.key === key ? { ...item, quantity: item.quantity + 1 } : item);
+      return [...current, { key, articleId: article.id, title: article.title, price: Number(article.finalPrice ?? article.price) || 0, quantity: 1, variantLabel: variant?.label || "", variantSize: variant?.size || "" }];
+    });
+  };
+  const validateCashSale = async () => {
+    if (!cashCart.length || isCashSubmitting) return;
+    setIsCashSubmitting(true);
+    try {
+      await runTransaction(db, async (transaction) => {
+        for (const item of cashCart) {
+          const articleRef = doc(db, "articles", item.articleId);
+          const snapshot = await transaction.get(articleRef);
+          if (!snapshot.exists()) throw new Error("Article introuvable");
+          const article = snapshot.data() as any;
+          const variants = Array.isArray(article.variants) ? [...article.variants] : [];
+          if (item.variantLabel) {
+            const index = variants.findIndex((variant: any) => variant.label === item.variantLabel);
+            if (index < 0 || variants[index].isAvailable === false || Number(variants[index].quantity) < item.quantity) throw new Error(`Stock insuffisant : ${item.title}`);
+            variants[index] = { ...variants[index], quantity: Number(variants[index].quantity) - item.quantity, isAvailable: Number(variants[index].quantity) - item.quantity > 0 };
+            transaction.update(articleRef, { variants, quantity: variants.filter((variant: any) => variant.isAvailable !== false).reduce((sum: number, variant: any) => sum + Number(variant.quantity || 0), 0) });
+          } else {
+            const remaining = Number(article.quantity || 0) - item.quantity;
+            if (remaining < 0) throw new Error(`Stock insuffisant : ${item.title}`);
+            transaction.update(articleRef, { quantity: remaining, isAvailable: remaining > 0 });
+          }
+        }
+      });
+      await addDoc(collection(db, "orders"), { items: cashCart, total: cashTotal, paymentMethod: cashPaymentMethod, status: "validated", source: "caisse", createdAt: new Date().toISOString() });
+      setCashCart([]); setSuccessMessage("Vente enregistrée et stock mis à jour."); setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (error: any) { alert(error.message || "Impossible d'enregistrer la vente."); }
+    finally { setIsCashSubmitting(false); }
+  };
 
   return (
     <main className={`min-h-screen flex flex-col font-sans px-6 py-6 md:px-16 transition-colors duration-500 ${
@@ -1186,6 +1228,7 @@ function AdminPage() {
           >
             Inscrits ({users.length})
           </button>
+          <button onClick={() => setActiveTab("cashier")} className={`pb-2 transition-colors ${activeTab === "cashier" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Caisse</button>
         </div>
 
         {successMessage && (
@@ -1195,6 +1238,15 @@ function AdminPage() {
         )}
 
         {activeTab === "tutorial" && <AdminTutorial />}
+
+        {activeTab === "cashier" && <section className={`p-6 border grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
+          <div>
+            <h2 className="font-serif text-2xl text-[#C4A77D] mb-4">Caisse enregistreuse</h2>
+            <input value={cashSearch} onChange={(e) => setCashSearch(e.target.value)} placeholder="Rechercher un article..." className={`w-full p-3 border mb-4 ${isDayMode ? "bg-white border-stone-300" : "bg-black border-stone-800"}`} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[520px] overflow-y-auto pr-2">{cashProducts.map((article: any) => <div key={article.id} className="border border-stone-800 p-3 space-y-2"><p className="text-[#C4A77D]">{article.title}</p><p className="text-xs text-stone-500">Stock : {getArticleStock(article)} · {(Number(article.finalPrice ?? article.price) || 0).toFixed(2)} €</p>{Array.isArray(article.variants) && article.variants.filter((variant: any) => variant.isAvailable !== false && Number(variant.quantity) > 0).length > 0 ? <div className="flex flex-wrap gap-2">{article.variants.filter((variant: any) => variant.isAvailable !== false && Number(variant.quantity) > 0).map((variant: any) => <button key={variant.label} type="button" onClick={() => addCashItem(article, variant)} className="border border-[#C4A77D]/50 px-2 py-1 text-xs">{variant.label}{variant.size ? ` · ${variant.size}` : ""}</button>)}</div> : <button type="button" onClick={() => addCashItem(article)} className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Ajouter</button>}</div>)}</div>
+          </div>
+          <div className="border border-stone-800 p-4 h-fit"><h3 className="text-[#C4A77D] uppercase tracking-widest mb-4">Ticket</h3>{cashCart.length === 0 ? <p className="text-sm text-stone-500">Aucun article ajouté.</p> : <div className="space-y-3">{cashCart.map((item) => <div key={item.key} className="flex justify-between gap-3 border-b border-stone-800 pb-2 text-sm"><div><p>{item.title}</p><p className="text-xs text-stone-500">{item.variantLabel}{item.variantSize ? ` · ${item.variantSize}` : ""} × {item.quantity}</p></div><button type="button" onClick={() => setCashCart(cashCart.filter((line) => line.key !== item.key))} className="text-red-400 text-xs">Retirer</button></div>)}<p className="flex justify-between text-lg text-[#C4A77D]"><span>Total</span><span>{cashTotal.toFixed(2)} €</span></p><select value={cashPaymentMethod} onChange={(e) => setCashPaymentMethod(e.target.value)} className="w-full border border-stone-700 bg-black p-3"><option>Espèces</option><option>Carte bancaire</option><option>Chèque</option><option>Autre</option></select><button type="button" disabled={isCashSubmitting} onClick={validateCashSale} className="w-full bg-[#C4A77D] py-3 text-black uppercase">{isCashSubmitting ? "Enregistrement..." : "Valider la vente"}</button></div>}</div>
+        </section>}
 
         {/* ONGLET COMMANDES */}
         {activeTab === "orders" && (
