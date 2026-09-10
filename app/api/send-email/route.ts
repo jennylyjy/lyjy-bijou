@@ -383,7 +383,7 @@ const makeTicketPdf = (order: OrderDetails): string => {
     order.change !== undefined ? `Monnaie rendue : ${formatPrice(order.change)}` : "",
     "Merci pour votre achat !",
   ].filter(Boolean);
-  const escapePdf = (value: string) => value.replaceAll("\\", "\\\\").replaceAll("(", "\\(").replaceAll(")", "\\)");
+  const escapePdf = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replaceAll("€", "EUR").replaceAll("œ", "oe").replaceAll("Œ", "OE").replaceAll("\\", "\\\\").replaceAll("(", "\\(").replaceAll(")", "\\)");
   const commands = ["BT", "/F1 11 Tf", "50 790 Td", ...lines.flatMap((line, index) => [index ? "0 -18 Td" : "", `(${escapePdf(line)}) Tj`]), "ET"].filter(Boolean).join(" ");
   const objects = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 420 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>", `<< /Length ${commands.length} >>\nstream\n${commands}\nendstream`, "", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"];
   let pdf = "%PDF-1.4\n";
@@ -492,10 +492,13 @@ const POST = async (
                   >
                     <div
                       style="
-                        padding: 35px;
+                        padding: 28px;
+                        text-align: center;
                         border-bottom: 2px solid #C4A77D;
+                        background: #111 url('https://www.lyjy.fr/lyjy-banner-email.jpg') center/cover;
                       "
                     >
+                      <img src="https://www.lyjy.fr/logo.png" alt="LYJY" style="width:110px;background:#fff;padding:8px" />
                       <h1
                         style="
                           margin: 0;
