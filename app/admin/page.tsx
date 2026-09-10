@@ -97,6 +97,10 @@ function AdminPage() {
   const [cashDialogCode, setCashDialogCode] = useState("");
   const [cashDialogConfirm, setCashDialogConfirm] = useState("");
   const [cashDialogCounts, setCashDialogCounts] = useState<Record<string, number>>({});
+  const [manualDialog, setManualDialog] = useState(false);
+  const [manualTitle, setManualTitle] = useState("Divers");
+  const [manualPrice, setManualPrice] = useState("");
+  const [cashClosures, setCashClosures] = useState<any[]>([]);
 
   const [editingArticle, setEditingArticle] = useState<any | null>(null);
   const [editImageFiles, setEditImageFiles] = useState<FileList | null>(null);
@@ -225,6 +229,10 @@ function AdminPage() {
       setVirtualAdventCalendars(snapshot.docs.map(calendarDoc => ({ id: calendarDoc.id, ...calendarDoc.data() })));
     });
 
+    const unsubCashClosures = onSnapshot(query(collection(db, "cashClosures"), orderBy("closedAt", "desc")), snapshot => {
+      setCashClosures(snapshot.docs.map(closureDoc => ({ id: closureDoc.id, ...closureDoc.data() })));
+    }, () => setCashClosures([]));
+
     const unsubCatalogTaxonomy = onSnapshot(doc(db, "settings", "catalogTaxonomy"), snapshot => {
       if (!snapshot.exists()) return;
       const data = snapshot.data();
@@ -260,6 +268,7 @@ function AdminPage() {
       unsubCoupons();
       unsubGiftCards();
       unsubVirtualAdvents();
+      unsubCashClosures();
       unsubCatalogTaxonomy();
     };
   }, [currentUser, adminAllowed]);
@@ -1128,11 +1137,13 @@ function AdminPage() {
   };
   const addManualCashItem = () => {
     if (cashSession?.status !== "open") return alert("Ouvrez la caisse avant d'ajouter une vente.");
-    const title = window.prompt("Description de la vente diverse :", "Divers")?.trim();
-    if (!title) return;
-    const price = Number(window.prompt("Prix de la vente (€) :", "0") || 0);
+    setManualTitle("Divers"); setManualPrice(""); setManualDialog(true);
+  };
+  const confirmManualCashItem = () => {
+    const price = Number(manualPrice.replace(",", "."));
     if (!Number.isFinite(price) || price <= 0) return alert("Prix invalide.");
-    setCashCart(current => [...current, { key: `manual-${Date.now()}`, articleId: "", title, ref: "DIVERS", category: "divers", price, quantity: 1, variantLabel: "", variantSize: "", manual: true }]);
+    setCashCart(current => [...current, { key: `manual-${Date.now()}`, articleId: "", title: manualTitle.trim() || "Divers", ref: "DIVERS", category: "divers", price, quantity: 1, variantLabel: "", variantSize: "", manual: true }]);
+    setManualDialog(false);
   };
   const validateCashSale = async () => {
     if (!cashCart.length || isCashSubmitting) return;
@@ -1219,9 +1230,8 @@ function AdminPage() {
     if (cashSession?.status !== "open" && cashSession?.status !== "paused") return;
     setCashDialog("close"); setCashDialogStep("code"); setCashDialogCode(""); setCashDialogCounts({});
   };
-  const finishCashClosure = (finalCash: number) => {
-    const today = new Date().toDateString();
-    const daySales = orders.filter(order => order.source === "caisse" && (order.sessionId === cashSession.openedAt || (!order.sessionId && new Date(order.createdAt || 0).toDateString() === today)));
+  const finishCashClosure = async (finalCash: number) => {
+    const daySales = orders.filter(order => order.source === "caisse" && order.sessionId === cashSession.openedAt);
     const byMethod = daySales.reduce((summary: any, sale: any) => {
       summary[sale.paymentMethod || "Autre"] = (summary[sale.paymentMethod || "Autre"] || 0) + (Number(sale.total) || 0);
       return summary;
@@ -1229,6 +1239,8 @@ function AdminPage() {
     const total = daySales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0);
     const cashSales = byMethod["Espèces"] || 0;
     const expectedCash = Number(cashSession.openingCash || 0) + cashSales;
+    const closure = { sessionId: cashSession.openedAt, openedAt: cashSession.openedAt, closedAt: new Date().toISOString(), openingCash: Number(cashSession.openingCash || 0), finalCash, expectedCash, total, byMethod, sales: daySales };
+    await addDoc(collection(db, "cashClosures"), closure);
     const reportRows = daySales.map((sale: any) => `<tr><td>${new Date(sale.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</td><td>${sale.ticketNumber}</td><td>${sale.items.map((item: any) => `${item.title}${item.ref ? ` (${item.ref})` : ""} x${item.quantity}`).join("<br>")}</td><td>${sale.paymentMethod}</td><td>${Number(sale.total).toFixed(2)} €</td></tr>`).join("");
     const reportWindow = window.open("", "_blank", "width=900,height=700");
     if (reportWindow) {
@@ -1237,6 +1249,13 @@ function AdminPage() {
     }
     setCashSession({ status: "closed", closedAt: new Date().toISOString(), finalCash, expectedCash });
     setSuccessMessage("Caisse clôturée et récapitulatif prêt à enregistrer en PDF."); setTimeout(() => setSuccessMessage(""), 4000);
+  };
+  const viewCashClosurePdf = (closure: any) => {
+    const rows = (closure.sales || []).map((sale: any) => `<tr><td>${new Date(sale.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</td><td>${sale.ticketNumber}</td><td>${sale.items.map((item: any) => `${item.title}${item.ref ? ` (${item.ref})` : ""} x${item.quantity}`).join("<br>")}</td><td>${sale.paymentMethod}</td><td>${Number(sale.total).toFixed(2)} €</td></tr>`).join("");
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) return;
+    win.document.write(`<!doctype html><html><head><title>Clôture caisse LYJY</title><style>body{font-family:Arial;padding:32px;color:#222}h1{color:#9a773f}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ccc;padding:8px;font-size:12px;text-align:left}th{background:#eee}.totals{margin-top:24px;line-height:1.8}</style></head><body><h1>LYJY ATELIER — Clôture de caisse</h1><p>Date : ${new Date(closure.closedAt).toLocaleString("fr-FR")}</p><table><thead><tr><th>Heure</th><th>Ticket</th><th>Articles / références</th><th>Paiement</th><th>Total</th></tr></thead><tbody>${rows || `<tr><td colspan="5">Aucune vente</td></tr>`}</tbody></table><div class="totals"><strong>Total ventes : ${Number(closure.total || 0).toFixed(2)} €</strong><br>${Object.entries(closure.byMethod || {}).map(([method, amount]) => `${method} : ${(amount as number).toFixed(2)} €`).join("<br>")}<br>Fond de caisse : ${Number(closure.openingCash || 0).toFixed(2)} €<br>Espèces attendues : ${Number(closure.expectedCash || 0).toFixed(2)} €<br>Espèces comptées : ${Number(closure.finalCash || 0).toFixed(2)} €<br>Écart : ${(Number(closure.finalCash || 0) - Number(closure.expectedCash || 0)).toFixed(2)} €</div><script>window.onload=()=>window.print()</script></body></html>`);
+    win.document.close();
   };
 
   return (
@@ -1393,10 +1412,11 @@ function AdminPage() {
               {cashSession?.status !== "closed" && <span className="text-xs text-stone-500">Fond initial : {Number(cashSession.openingCash || 0).toFixed(2)} €</span>}
             </div>
             {cashDialog && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"><div className="w-full max-w-xl border border-[#C4A77D] bg-stone-950 p-5"><div className="mb-4 flex items-center justify-between"><h3 className="font-serif text-xl text-[#C4A77D]">{cashDialog === "open" ? (cashDialogStep === "code" ? "Créer le code caisse" : "Fond de caisse de départ") : cashDialogStep === "code" ? "Code caisse" : "Comptage de clôture"}</h3><button type="button" onClick={() => setCashDialog(null)} className="text-stone-400"><X /></button></div>{cashDialogStep === "code" ? <><div className="mb-4 border border-stone-700 bg-black p-4 text-center text-2xl tracking-[0.5em]">{cashDialogCode || "••••"}</div><div className="grid grid-cols-3 gap-2">{["1","2","3","4","5","6","7","8","9","←","0","C"].map(key => <button key={key} type="button" onClick={() => key === "C" ? setCashDialogCode("") : key === "←" ? setCashDialogCode(value => value.slice(0, -1)) : keypad(key)} className="border border-stone-700 py-3 text-lg hover:bg-[#C4A77D] hover:text-black">{key}</button>)}</div><button type="button" onClick={confirmCashDialog} className="mt-4 w-full bg-[#C4A77D] py-3 text-black uppercase">Valider</button></> : <><p className="mb-3 text-sm text-stone-400">Indiquez le nombre de pièces et de billets présents.</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{cashDenominations.map(([value, label]) => <label key={value} className="border border-stone-700 p-2 text-xs"><span className="block text-stone-400">{label}</span><input type="number" min="0" step="1" value={cashDialogCounts[value] || ""} onChange={event => setCashDialogCounts(current => ({ ...current, [value]: Math.max(0, Number(event.target.value) || 0) }))} className="mt-1 w-full border border-stone-800 bg-black p-2 text-center" /></label>)}</div><p className="mt-4 flex justify-between border-t border-stone-700 pt-3 text-lg text-[#C4A77D]"><span>Total compté</span><strong>{countedCash.toFixed(2)} €</strong></p><button type="button" onClick={confirmCashDialog} className="mt-3 w-full bg-green-600 py-3 uppercase text-white">{cashDialog === "close" ? "Valider la clôture" : "Valider le fond de caisse"}</button></>}</div></div>}
+            {manualDialog && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"><div className="w-full max-w-sm border border-[#C4A77D] bg-stone-950 p-5"><div className="mb-4 flex items-center justify-between"><h3 className="font-serif text-xl text-[#C4A77D]">Divers manuel</h3><button type="button" onClick={() => setManualDialog(false)} className="text-stone-400"><X /></button></div><input value={manualTitle} onChange={event => setManualTitle(event.target.value)} placeholder="Description" className="mb-3 w-full border border-stone-700 bg-black p-3" /><div className="mb-4 border border-stone-700 bg-black p-4 text-center text-2xl tracking-widest">{manualPrice || "0,00"} €</div><div className="grid grid-cols-3 gap-2">{["1","2","3","4","5","6","7","8","9",",","0","←","C"].map(key => <button key={key} type="button" onClick={() => key === "C" ? setManualPrice("") : key === "←" ? setManualPrice(value => value.slice(0, -1)) : setManualPrice(value => `${value}${key}`)} className="border border-stone-700 py-3 text-lg hover:bg-[#C4A77D] hover:text-black">{key}</button>)}</div><button type="button" onClick={confirmManualCashItem} className="mt-4 w-full bg-green-600 py-3 uppercase text-white">Ajouter au ticket</button></div></div>}
             <div className="grid grid-cols-1 md:grid-cols-[1fr_220px_auto] gap-3 mb-4"><input value={cashSearch} onChange={(e) => setCashSearch(e.target.value)} placeholder="Rechercher par article ou référence..." className={`w-full p-3 border ${isDayMode ? "bg-white border-stone-300" : "bg-black border-stone-800"}`} /><select value={cashCategory} onChange={(e) => setCashCategory(e.target.value)} className={`w-full p-3 border ${isDayMode ? "bg-white border-stone-300" : "bg-black border-stone-800"}`}><option value="all">Toutes les catégories</option>{catalogTaxonomy.categories.filter(item => item.isVisible).map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select><button type="button" onClick={addManualCashItem} className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Divers manuel</button></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[520px] overflow-y-auto pr-2">{cashProducts.map((article: any) => <div key={article.id} className="border border-stone-800 p-3 space-y-2"><img src={article.imageUrl || article.imageUrls?.[0] || "/logo.png"} alt={article.title} className="w-full h-28 object-cover" /><p className="text-[#C4A77D]">{article.title}</p><p className="text-[10px] text-stone-500">Réf. : {article.ref || "—"}</p><p className="text-xs text-stone-500">Stock : {getArticleStock(article)} · {(Number(article.finalPrice ?? article.price) || 0).toFixed(2)} €</p>{Array.isArray(article.variants) && article.variants.filter((variant: any) => variant.isAvailable !== false && Number(variant.quantity) > 0).length > 0 ? <div className="flex flex-wrap gap-2">{article.variants.filter((variant: any) => variant.isAvailable !== false && Number(variant.quantity) > 0).map((variant: any) => <button key={variant.label} type="button" onClick={() => addCashItem(article, variant)} className="border border-[#C4A77D]/50 px-2 py-1 text-xs">{variant.label}{variant.size ? ` · ${variant.size}` : ""}</button>)}</div> : <button type="button" onClick={() => addCashItem(article)} className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Ajouter</button>}</div>)}</div>
           </div>
-          <div className="border border-stone-800 p-4 h-fit"><h3 className="text-[#C4A77D] uppercase tracking-widest mb-4">Ticket</h3>{cashCart.length === 0 ? <p className="text-sm text-stone-500">Aucun article ajouté.</p> : <div className="space-y-3">{cashCart.map((item) => <div key={item.key} className="flex justify-between gap-3 border-b border-stone-800 pb-2 text-sm"><div><p>{item.title}</p><p className="text-xs text-stone-500">{item.variantLabel}{item.variantSize ? ` · ${item.variantSize}` : ""} × {item.quantity}</p></div><button type="button" onClick={() => setCashCart(cashCart.filter((line) => line.key !== item.key))} className="text-red-400 text-xs">Retirer</button></div>)}<p className="flex justify-between border-t border-stone-700 pt-3 text-xl text-[#C4A77D]"><span>TOTAL</span><span>{cashTotal.toFixed(2)} €</span></p><button type="button" onClick={() => { setCashPaymentOpen(true); setCashPaymentMethod("Espèces"); setCashAmountReceived(""); }} className="w-full bg-[#C4A77D] py-3 text-black uppercase tracking-widest">TOTAL / ENCAISSER</button>{cashPaymentOpen && <div className="space-y-3 border border-[#C4A77D]/40 p-3"><p className="text-xs uppercase tracking-widest text-stone-500">Mode de paiement</p><div className="grid grid-cols-2 gap-2">{["Espèces", "Carte bancaire", "Chèque", "Autre"].map((method) => <button key={method} type="button" onClick={() => { setCashPaymentMethod(method); if (method !== "Espèces") setCashAmountReceived(cashTotal.toFixed(2)); }} className={`border px-2 py-3 text-xs ${cashPaymentMethod === method ? "border-[#C4A77D] bg-[#C4A77D] text-black" : "border-stone-700"}`}>{method}</button>)}</div>{cashPaymentMethod === "Espèces" && <><label className="block text-xs uppercase tracking-widest text-stone-500">Montant reçu</label><input type="number" min={cashTotal} step="0.01" value={cashAmountReceived} onChange={(e) => setCashAmountReceived(e.target.value)} placeholder={cashTotal.toFixed(2)} className="w-full border border-stone-700 bg-black p-3 text-lg" /><p className="flex justify-between text-lg text-green-400"><span>Monnaie à rendre</span><span>{cashChange.toFixed(2)} €</span></p></>}{cashPaymentMethod !== "Espèces" && <p className="text-sm text-stone-400">Montant à encaisser : <strong className="text-[#C4A77D]">{cashTotal.toFixed(2)} €</strong></p>}<button type="button" disabled={isCashSubmitting || (cashPaymentMethod === "Espèces" && (Number(cashAmountReceived) || 0) < cashTotal)} onClick={validateCashSale} className="w-full bg-green-600 py-3 text-white uppercase">{isCashSubmitting ? "Enregistrement..." : "Valider le paiement"}</button></div>}</div>}</div>
+          <div className="border border-stone-800 p-4 h-fit"><h3 className="text-[#C4A77D] uppercase tracking-widest mb-4">Ticket</h3>{cashCart.length === 0 ? <p className="text-sm text-stone-500">Aucun article ajouté.</p> : <div className="space-y-3">{cashCart.map((item) => <div key={item.key} className="flex justify-between gap-3 border-b border-stone-800 pb-2 text-sm"><div><p>{item.title}</p><p className="text-xs text-stone-500">{item.variantLabel}{item.variantSize ? ` · ${item.variantSize}` : ""} × {item.quantity}</p></div><button type="button" onClick={() => setCashCart(cashCart.filter((line) => line.key !== item.key))} className="text-red-400 text-xs">Retirer</button></div>)}<p className="flex justify-between border-t border-stone-700 pt-3 text-xl text-[#C4A77D]"><span>TOTAL</span><span>{cashTotal.toFixed(2)} €</span></p><button type="button" onClick={() => { setCashPaymentOpen(true); setCashPaymentMethod("Espèces"); setCashAmountReceived(""); }} className="w-full bg-[#C4A77D] py-3 text-black uppercase tracking-widest">TOTAL / ENCAISSER</button>{cashPaymentOpen && <div className="space-y-3 border border-[#C4A77D]/40 p-3"><p className="text-xs uppercase tracking-widest text-stone-500">Mode de paiement</p><div className="grid grid-cols-2 gap-2">{["Espèces", "Carte bancaire", "Chèque", "Autre"].map((method) => <button key={method} type="button" onClick={() => { setCashPaymentMethod(method); if (method !== "Espèces") setCashAmountReceived(cashTotal.toFixed(2)); }} className={`border px-2 py-3 text-xs ${cashPaymentMethod === method ? "border-[#C4A77D] bg-[#C4A77D] text-black" : "border-stone-700"}`}>{method}</button>)}</div>{cashPaymentMethod === "Espèces" && <><label className="block text-xs uppercase tracking-widest text-stone-500">Montant reçu</label><input type="number" min={cashTotal} step="0.01" value={cashAmountReceived} onChange={(e) => setCashAmountReceived(e.target.value)} placeholder={cashTotal.toFixed(2)} className="w-full border border-stone-700 bg-black p-3 text-lg" /><p className="flex justify-between text-lg text-green-400"><span>Monnaie à rendre</span><span>{cashChange.toFixed(2)} €</span></p></>}{cashPaymentMethod !== "Espèces" && <p className="text-sm text-stone-400">Montant à encaisser : <strong className="text-[#C4A77D]">{cashTotal.toFixed(2)} €</strong></p>}<button type="button" disabled={isCashSubmitting || (cashPaymentMethod === "Espèces" && (Number(cashAmountReceived) || 0) < cashTotal)} onClick={validateCashSale} className="w-full bg-green-600 py-3 text-white uppercase">{isCashSubmitting ? "Enregistrement..." : "Valider le paiement"}</button></div>}</div>}</div><div className="mt-6 border-t border-stone-800 pt-5 lg:col-span-2"><h3 className="mb-3 font-serif text-xl text-[#C4A77D]">PDF des clôtures de caisse</h3>{cashClosures.length === 0 ? <p className="text-sm text-stone-500">Aucun PDF de clôture enregistré.</p> : <div className="space-y-2">{cashClosures.map(closure => <div key={closure.id} className="flex flex-wrap items-center justify-between gap-3 border border-stone-800 p-3"><div><p className="text-sm">Clôture du {new Date(closure.closedAt).toLocaleString("fr-FR")}</p><p className="text-xs text-stone-500">{Number(closure.total || 0).toFixed(2)} € de ventes · espèces {Number(closure.byMethod?.Espèces || 0).toFixed(2)} € · carte {Number(closure.byMethod?.["Carte bancaire"] || 0).toFixed(2)} €</p></div><button type="button" onClick={() => viewCashClosurePdf(closure)} className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Voir le PDF</button></div>)}</div>}</div>
         </section>}
 
         {/* ONGLET COMMANDES */}
