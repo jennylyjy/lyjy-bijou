@@ -50,6 +50,10 @@ interface OrderDetails {
   items?: OrderItem[];
 
   address?: Address;
+  paymentMethod?: string;
+  amountReceived?: number | string;
+  change?: number | string;
+  attachPdf?: boolean;
 }
 
 interface GiftCardDetails {
@@ -360,6 +364,33 @@ const renderOrderItems = (
       `;
     })
     .join("");
+};
+
+const makeTicketPdf = (order: OrderDetails): string => {
+  const lines = [
+    "LYJY ATELIER BIJOUX",
+    "TICKET DE CAISSE",
+    `Commande : ${order.id}`,
+    "--------------------------------",
+    ...(order.items || []).flatMap(item => [
+      `${item.name || "Article LYJY"} x${item.quantity}  ${formatPrice((Number(item.price) || 0) * (Number(item.quantity) || 1))}`,
+      item.options?.ref ? `Ref : ${String(item.options.ref)}` : "",
+    ].filter(Boolean)),
+    "--------------------------------",
+    `TOTAL : ${formatPrice(order.total)}`,
+    order.paymentMethod ? `Paiement : ${order.paymentMethod}` : "",
+    order.amountReceived !== undefined ? `Montant reçu : ${formatPrice(order.amountReceived)}` : "",
+    order.change !== undefined ? `Monnaie rendue : ${formatPrice(order.change)}` : "",
+    "Merci pour votre achat !",
+  ].filter(Boolean);
+  const escapePdf = (value: string) => value.replaceAll("\\", "\\\\").replaceAll("(", "\\(").replaceAll(")", "\\)");
+  const commands = ["BT", "/F1 11 Tf", "50 790 Td", ...lines.flatMap((line, index) => [index ? "0 -18 Td" : "", `(${escapePdf(line)}) Tj`]), "ET"].filter(Boolean).join(" ");
+  const objects = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 420 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>", `<< /Length ${commands.length} >>\nstream\n${commands}\nendstream`, "", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"];
+  let pdf = "%PDF-1.4\n";
+  const offsets: number[] = [0];
+  objects.forEach((object, index) => { offsets.push(pdf.length); pdf += `${index + 1} 0 obj\n${object}\nendobj\n`; });
+  const xref = pdf.length; pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map(offset => `${String(offset).padStart(10, "0")} 00000 n `).join("\n")}\ntrailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return Buffer.from(pdf, "utf8").toString("base64");
 };
 
 const POST = async (
@@ -788,6 +819,9 @@ const POST = async (
               </body>
             </html>
           `,
+          ...(orderDetails.attachPdf ? {
+            attachments: [{ filename: `ticket-${orderDetails.id}.pdf`, content: makeTicketPdf(orderDetails) }],
+          } : {}),
         });
 
       if (result.error) {

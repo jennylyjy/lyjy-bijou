@@ -1188,9 +1188,16 @@ function AdminPage() {
       else window.open(`mailto:?subject=Ticket LYJY&body=${encodeURIComponent(text)}`, "_blank");
     } catch (error: any) { if (error?.name !== "AbortError") alert("Le partage du ticket n'est pas disponible sur cet appareil."); }
   };
+  const copyCashTicket = async () => {
+    if (!lastCashSale) return;
+    try {
+      await navigator.clipboard.writeText(ticketText(lastCashSale));
+      setSuccessMessage("Ticket copié. Tu peux maintenant le coller dans Fun Print."); setTimeout(() => setSuccessMessage(""), 3000);
+    } catch { alert("Impossible de copier le ticket."); }
+  };
   const emailCashTicket = async () => {
     if (!lastCashSale || !cashTicketEmail.trim()) return;
-    const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "ORDER_CONFIRMATION", email: cashTicketEmail.trim(), orderDetails: { id: "CAISSE", clientName: "Client comptoir", total: lastCashSale.total, items: lastCashSale.items } }) });
+    const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "ORDER_CONFIRMATION", email: cashTicketEmail.trim(), orderDetails: { id: lastCashSale.ticketNumber, clientName: "Client comptoir", total: lastCashSale.total, subtotal: lastCashSale.total, items: lastCashSale.items.map((item: any) => ({ name: item.title, price: item.price, quantity: item.quantity, options: { ref: item.ref, variant: item.variantLabel, size: item.variantSize } })), paymentMethod: lastCashSale.paymentMethod, amountReceived: lastCashSale.amountReceived, change: lastCashSale.change, attachPdf: true } }) });
     if (!response.ok) throw new Error("Impossible d'envoyer le ticket.");
     setSuccessMessage("Ticket envoyé par e-mail."); setCashTicketEmail("");
   };
@@ -1402,7 +1409,7 @@ function AdminPage() {
           </div>
         )}
 
-        {activeTab === "cashier" && lastCashSale && <div className="border border-green-500/30 bg-green-500/10 p-4 space-y-3"><p className="text-sm text-green-400">Vente terminée. Que souhaitez-vous faire du ticket ?</p><div className="flex flex-col md:flex-row gap-2"><button type="button" onClick={shareCashTicket} className="border border-[#C4A77D] px-4 py-2 text-xs uppercase">Partager avec Fun Print</button><input type="email" value={cashTicketEmail} onChange={(e) => setCashTicketEmail(e.target.value)} placeholder="E-mail du client" className="flex-1 border border-stone-700 bg-black px-3 py-2 text-sm" /><button type="button" onClick={() => emailCashTicket().catch((error) => alert(error.message))} disabled={!cashTicketEmail.trim()} className="bg-[#C4A77D] px-4 py-2 text-xs uppercase text-black disabled:opacity-50">Envoyer par e-mail</button></div></div>}
+        {activeTab === "cashier" && lastCashSale && <div className="border border-green-500/30 bg-green-500/10 p-4 space-y-3"><p className="text-sm text-green-400">Vente terminée. Que souhaitez-vous faire du ticket ?</p><div className="flex flex-col md:flex-row gap-2"><button type="button" onClick={copyCashTicket} className="border border-[#C4A77D] px-4 py-2 text-xs uppercase">Copier le ticket</button><input type="email" value={cashTicketEmail} onChange={(e) => setCashTicketEmail(e.target.value)} placeholder="E-mail du client" className="flex-1 border border-stone-700 bg-black px-3 py-2 text-sm" /><button type="button" onClick={() => emailCashTicket().catch((error) => alert(error.message))} disabled={!cashTicketEmail.trim()} className="bg-[#C4A77D] px-4 py-2 text-xs uppercase text-black disabled:opacity-50">Envoyer par e-mail</button></div></div>}
 
         {activeTab === "tutorial" && <AdminTutorial />}
 
