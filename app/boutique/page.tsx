@@ -144,6 +144,12 @@ export default function BoutiquePage() {
 
       <div className="max-w-6xl mx-auto w-full space-y-10">
         <div className="h-2" aria-hidden="true" />
+        <div className={`relative overflow-hidden border p-5 text-center md:p-7 ${isDayMode ? "border-[#C4A77D] bg-[#fbf7f0]" : "border-[#C4A77D]/70 bg-gradient-to-r from-[#17100b] via-[#3a2412] to-[#17100b]"}`}>
+          <p className="text-[10px] uppercase tracking-[0.35em] text-[#C4A77D]">Offre de bienvenue</p>
+          <h2 className="mt-2 font-serif text-xl tracking-[0.12em] text-[#C4A77D] md:text-3xl">-5 % sur votre première commande</h2>
+          <p className={`mt-2 text-xs ${isDayMode ? "text-stone-600" : "text-stone-300"}`}>Offre réservée aux 15 premières personnes qui passent leur toute première commande</p>
+          <span className="mt-3 inline-block border border-[#C4A77D] px-5 py-2 font-mono text-lg tracking-[0.25em] text-[#C4A77D]">LYJY5</span>
+        </div>
         {filteredProducts.length === 0 ? (
           <p className="text-center text-xs tracking-widest text-stone-500 uppercase py-12">
             Aucun article disponible pour le moment.
