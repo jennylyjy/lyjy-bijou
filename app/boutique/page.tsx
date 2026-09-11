@@ -144,16 +144,16 @@ export default function BoutiquePage() {
 
       <div className="max-w-6xl mx-auto w-full space-y-10">
         <div className="h-2" aria-hidden="true" />
-        <div className="relative overflow-hidden border border-[#C4A77D]/80 bg-cover bg-center p-5 text-center shadow-[0_12px_35px_rgba(0,0,0,0.35)] md:p-8" style={{ backgroundImage: "linear-gradient(rgba(8,5,4,0.58), rgba(8,5,4,0.72)), url('/lyjy-banner-new.jpg')" }}>
-          <div className="relative z-10 flex items-center justify-center gap-5 md:gap-16">
-            <img src="/logo.png" alt="LYJY" className="hidden h-20 w-auto object-contain drop-shadow-[0_0_16px_rgba(196,167,125,0.8)] animate-heartbeat sm:block md:h-28" />
+        <div className="relative overflow-hidden border border-[#C4A77D]/80 bg-cover bg-center p-3 text-center shadow-[0_12px_35px_rgba(0,0,0,0.35)] sm:p-5 md:p-8" style={{ backgroundImage: "linear-gradient(rgba(8,5,4,0.58), rgba(8,5,4,0.72)), url('/lyjy-banner-new.jpg')" }}>
+          <div className="relative z-10 flex items-center justify-center gap-2 sm:gap-5 md:gap-16">
+            <img src="/logo.png" alt="LYJY" className="block h-10 w-10 shrink-0 object-contain drop-shadow-[0_0_12px_rgba(196,167,125,0.8)] animate-heartbeat sm:h-20 sm:w-auto md:h-28" />
             <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.35em] text-[#f2d29b]">Offre de bienvenue</p>
-            <h2 className="mt-2 font-serif text-xl font-semibold tracking-[0.12em] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] md:text-3xl">-5 % sur votre première commande</h2>
-            <p className="mt-2 text-xs text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.95)]">Offre réservée aux 15 premières personnes qui passent leur toute première commande</p>
-            <span className="mt-3 inline-block border border-[#f2d29b] bg-black/25 px-5 py-2 font-mono text-lg tracking-[0.25em] text-[#f2d29b] shadow-lg">LYJY5</span>
+            <p className="text-[8px] uppercase tracking-[0.18em] text-[#f2d29b] sm:text-[10px] sm:tracking-[0.35em]">Offre de bienvenue</p>
+            <h2 className="mt-1 font-serif text-sm font-semibold leading-tight tracking-[0.04em] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] sm:mt-2 sm:text-xl sm:tracking-[0.12em] md:text-3xl">-5 % sur votre première commande</h2>
+            <p className="mt-1 text-[9px] leading-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.95)] sm:mt-2 sm:text-xs">Offre réservée aux 15 premières personnes qui passent leur toute première commande</p>
+            <span className="mt-2 inline-block border border-[#f2d29b] bg-black/25 px-3 py-1 font-mono text-sm tracking-[0.2em] text-[#f2d29b] shadow-lg sm:mt-3 sm:px-5 sm:py-2 sm:text-lg sm:tracking-[0.25em]">LYJY5</span>
             </div>
-            <img src="/logo.png" alt="LYJY" className="hidden h-20 w-auto object-contain drop-shadow-[0_0_16px_rgba(196,167,125,0.8)] animate-heartbeat sm:block md:h-28" />
+            <img src="/logo.png" alt="LYJY" className="block h-10 w-10 shrink-0 object-contain drop-shadow-[0_0_12px_rgba(196,167,125,0.8)] animate-heartbeat sm:h-20 sm:w-auto md:h-28" />
           </div>
         </div>
         {filteredProducts.length === 0 ? (
