@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  12% { transform: scale(1.08); }
+  24% { transform: scale(1); }
+  36% { transform: scale(1.05); }
+  52% { transform: scale(1); }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 2.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
 .hero-readable * { text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95); }
 
 :root {
