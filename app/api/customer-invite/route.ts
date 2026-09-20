@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
     const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
     const origin = process.env.NEXT_PUBLIC_SITE_URL || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : "https://lyjy.fr");
-    const link = `${origin}/inscription?invite=${encodeURIComponent(token)}&email=${encodeURIComponent(email.trim().toLowerCase())}`;
+    const link = `${origin}/activation-compte?invite=${encodeURIComponent(token)}&email=${encodeURIComponent(email.trim().toLowerCase())}`;
     const key = process.env.RESEND_API_KEY;
     if (!key) return NextResponse.json({ error: "Service e-mail indisponible" }, { status: 503 });
     const year = new Date().getFullYear();
