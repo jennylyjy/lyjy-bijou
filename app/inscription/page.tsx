@@ -20,7 +20,13 @@ export default function RegisterPage() {
     street: "",
     postalCode: "",
     city: "",
+    phone: "",
   });
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const inviteEmail = params.get("email");
+    if (inviteEmail) setFormData(current => ({ ...current, email: inviteEmail }));
+  }, []);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -56,6 +62,7 @@ export default function RegisterPage() {
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
+        phone: formData.phone,
         addressDetails: { street: formData.street, postalCode: formData.postalCode, city: formData.city },
       }, formData.password);
       useCartStore.getState().syncCart();
@@ -158,6 +165,11 @@ export default function RegisterPage() {
                   isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-black border-stone-800 text-stone-100"
                 }`}
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs tracking-widest uppercase text-stone-500">Téléphone</label>
+              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="06 00 00 00 00" className={`w-full p-3 text-sm border focus:outline-none focus:border-[#C4A77D] ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-black border-stone-800 text-stone-100"}`} />
             </div>
 
             <div className="space-y-2 relative"><label className="block text-xs tracking-widest uppercase text-stone-500">Adresse postale</label><input type="text" name="street" required value={formData.street} onChange={handleChange} placeholder="12 rue des Fleurs" autoComplete="street-address" className={`w-full p-3 text-sm border ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-black border-stone-800 text-stone-100"}`} />{addressSuggestions.length > 0 && <div className="absolute z-10 w-full border border-stone-700 bg-stone-950">{addressSuggestions.map((feature, index) => <button type="button" key={feature.properties?.id || index} onClick={() => selectAddress(feature)} className="block w-full text-left p-2 text-xs hover:bg-stone-800">{feature.properties?.label}</button>)}</div>}</div>

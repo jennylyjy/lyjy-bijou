@@ -1,5 +1,5 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
 export interface CustomerProfile {
@@ -7,6 +7,7 @@ export interface CustomerProfile {
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string;
   addressDetails?: {
     street?: string;
     complement?: string;
@@ -28,6 +29,7 @@ const normalizeProfile = (uid: string, data: Partial<LegacyUser>, email: string)
   email: email.trim().toLowerCase(),
   firstName: String(data.firstName || ""),
   lastName: String(data.lastName || ""),
+  ...(data.phone ? { phone: String(data.phone) } : {}),
   ...(data.welcomeEmailSent ? { welcomeEmailSent: true } : {}),
   referralCode: String(data.referralCode || `LYJY-${uid.slice(0, 6).toUpperCase()}`),
   referralUses: Number(data.referralUses) || 0,
@@ -57,6 +59,18 @@ export async function registerCustomer(data: Omit<CustomerProfile, "uid">, passw
   const credential = await createUserWithEmailAndPassword(auth, data.email.trim().toLowerCase(), password);
   const profile = normalizeProfile(credential.user.uid, { ...data, referralCode: `LYJY-${credential.user.uid.slice(0, 6).toUpperCase()}` }, credential.user.email || data.email);
   await setDoc(doc(db, "users", credential.user.uid), { ...profile, createdAt: new Date().toISOString() });
+  const inviteToken = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("invite") : null;
+  if (inviteToken) {
+    const pendingRef = doc(db, "pendingCustomers", inviteToken);
+    const pending = await getDoc(pendingRef);
+    if (pending.exists() && String(pending.data().email || "").toLowerCase() === profile.email) {
+      await updateDoc(doc(db, "users", credential.user.uid), {
+        loyaltyPoints: Number(pending.data().loyaltyPoints) || 0,
+        createdFromCashier: true,
+      });
+      await deleteDoc(pendingRef);
+    }
+  }
   storeSafeProfile(profile);
   await signOut(auth);
   return profile;
