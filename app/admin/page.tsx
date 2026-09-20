@@ -1184,19 +1184,18 @@ function AdminPage() {
     const normalizeScanCode = (value: unknown) => String(value || "").normalize("NFKC").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     const scannedValue = event.currentTarget.value || cashBarcode;
     const code = normalizeScanCode(scannedValue);
+    event.currentTarget.value = "";
+    setCashBarcode("");
     if (!code) return;
     const matchesScan = (value: unknown) => {
       const candidate = normalizeScanCode(value);
       if (!candidate) return false;
-      if (candidate === code || candidate.includes(code) || code.includes(candidate)) return true;
-      const scanDigits = code.replace(/\D/g, "");
-      const candidateDigits = candidate.replace(/\D/g, "");
-      return scanDigits.length >= 5 && candidateDigits.length >= 5 && (scanDigits.includes(candidateDigits) || candidateDigits.includes(scanDigits));
+      return candidate === code;
     };
     const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(matchesScan));
-    if (article) { addCashItem(article); setCashBarcode(""); return; }
+    if (article) { addCashItem(article); return; }
     const variantMatch = articles.flatMap((item: any) => (Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ article: item, variant })) : [])).find(({ variant }: any) => [variant.barcode, variant.ean, variant.ref, variant.code].some(matchesScan));
-    if (variantMatch) { addCashItem(variantMatch.article, variantMatch.variant); setCashBarcode(""); return; }
+    if (variantMatch) { addCashItem(variantMatch.article, variantMatch.variant); return; }
     setCashSearch(scannedValue.trim());
     alert(`Aucun article trouvé pour le code « ${scannedValue.trim()} ».`);
     setCashBarcode("");
