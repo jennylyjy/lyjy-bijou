@@ -953,7 +953,10 @@ function AdminPage() {
     if (!editingArticle) return;
 
     try {
-      let imageUrls = editingArticle.imageUrls || [editingArticle.imageUrl || "/logo.png"];
+      const existingImageUrls = Array.isArray(editingArticle.imageUrls) && editingArticle.imageUrls.length > 0
+        ? editingArticle.imageUrls.filter((url: unknown): url is string => typeof url === "string" && url.trim().length > 0)
+        : (typeof editingArticle.imageUrl === "string" && editingArticle.imageUrl.trim() ? [editingArticle.imageUrl] : []);
+      let imageUrls = existingImageUrls;
       
       if (editImageFiles && editImageFiles.length > 0) {
         const newUploadedUrls: string[] = [];
@@ -1007,10 +1010,14 @@ function AdminPage() {
         subcategory: String(editingArticle.subcategory || "").toLowerCase(),
         theme: String(editingArticle.theme || "").toLowerCase(),
         color: String(editingArticle.color || "").toLowerCase(),
-        imageUrl: imageUrls[0],
-        imageUrls: imageUrls,
         variants: editedVariants,
       };
+      // Sans nouveau fichier, on ne réécrit pas les photos déjà stockées.
+      // Cela évite de remplacer une URL Firebase existante par le logo de secours.
+      if (editImageFiles && editImageFiles.length > 0 && imageUrls.length > 0) {
+        updatedData.imageUrl = imageUrls[0];
+        updatedData.imageUrls = imageUrls;
+      }
 
       if (editingArticle.isAdvent || editingArticle.category === "calendrier-avent") {
         const selectedCategories = editingArticle.adventConfig?.categories || [];
