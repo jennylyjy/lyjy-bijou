@@ -84,6 +84,7 @@ function AdminPage() {
   const [articleSearchRef, setArticleSearchRef] = useState("");
   const [isSubmittingArticle, setIsSubmittingArticle] = useState(false);
   const [cashSearch, setCashSearch] = useState("");
+  const [cashBarcode, setCashBarcode] = useState("");
   const [cashCategory, setCashCategory] = useState("all");
   const [cashCart, setCashCart] = useState<any[]>([]);
   const [cashPaymentMethod, setCashPaymentMethod] = useState("Espèces");
@@ -1176,6 +1177,19 @@ function AdminPage() {
       if (existing) return current.map((item) => item.key === key ? { ...item, quantity: item.quantity + 1 } : item);
       return [...current, { key, articleId: article.id, title: article.title, ref: article.ref || "", category: article.category || "", price: Number(article.finalPrice ?? article.price) || 0, quantity: 1, variantLabel: variant?.label || "", variantSize: variant?.size || "" }];
     });
+  };
+  const handleCashBarcodeScan = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const code = cashBarcode.trim().toLowerCase();
+    if (!code) return;
+    const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(value => String(value || "").toLowerCase() === code));
+    if (article) { addCashItem(article); setCashBarcode(""); return; }
+    const variantMatch = articles.flatMap((item: any) => (Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ article: item, variant })) : [])).find(({ variant }: any) => [variant.barcode, variant.ean, variant.ref, variant.code].some(value => String(value || "").toLowerCase() === code));
+    if (variantMatch) { addCashItem(variantMatch.article, variantMatch.variant); setCashBarcode(""); return; }
+    setCashSearch(cashBarcode.trim());
+    alert(`Aucun article trouvé pour le code « ${cashBarcode.trim()} ».`);
+    setCashBarcode("");
   };
   const addManualCashItem = () => {
     if (cashSession?.status !== "open") return alert("Ouvrez la caisse avant d'ajouter une vente.");
