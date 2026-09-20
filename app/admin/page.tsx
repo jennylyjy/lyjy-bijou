@@ -1182,14 +1182,15 @@ function AdminPage() {
     if (event.key !== "Enter") return;
     event.preventDefault();
     const normalizeScanCode = (value: unknown) => String(value || "").normalize("NFKC").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const code = normalizeScanCode(cashBarcode);
+    const scannedValue = event.currentTarget.value || cashBarcode;
+    const code = normalizeScanCode(scannedValue);
     if (!code) return;
     const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(value => normalizeScanCode(value) === code));
     if (article) { addCashItem(article); setCashBarcode(""); return; }
     const variantMatch = articles.flatMap((item: any) => (Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ article: item, variant })) : [])).find(({ variant }: any) => [variant.barcode, variant.ean, variant.ref, variant.code].some(value => normalizeScanCode(value) === code));
     if (variantMatch) { addCashItem(variantMatch.article, variantMatch.variant); setCashBarcode(""); return; }
-    setCashSearch(cashBarcode.trim());
-    alert(`Aucun article trouvé pour le code « ${cashBarcode.trim()} ».`);
+    setCashSearch(scannedValue.trim());
+    alert(`Aucun article trouvé pour le code « ${scannedValue.trim()} ».`);
     setCashBarcode("");
   };
   const addManualCashItem = () => {
