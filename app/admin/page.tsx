@@ -179,14 +179,6 @@ function AdminPage() {
     ));
   };
 
-  // Suivi Auth Firebase
-  useEffect(() => {
-    const savedCashSession = localStorage.getItem("lyjy_cash_session");
-    if (savedCashSession) {
-      try { setCashSession(JSON.parse(savedCashSession)); } catch { localStorage.removeItem("lyjy_cash_session"); }
-    }
-  }, []);
-
   useEffect(() => {
     if (cashSession?.status === "closed") localStorage.removeItem("lyjy_cash_session");
     else localStorage.setItem("lyjy_cash_session", JSON.stringify(cashSession));
@@ -196,7 +188,7 @@ function AdminPage() {
     if (!currentUser || !adminAllowed) return;
     return onSnapshot(doc(db, "settings", "cashRegister"), snapshot => {
       if (snapshot.exists()) setCashSession(snapshot.data());
-    });
+    }, () => setSuccessMessage("Synchronisation de caisse indisponible sur cet appareil."));
   }, [currentUser, adminAllowed]);
 
   useEffect(() => {
@@ -1152,7 +1144,12 @@ function AdminPage() {
   const keypad = (value: string) => setCashDialogCode(current => `${current}${value}`.slice(0, 12));
   const saveCashSession = async (session: any) => {
     setCashSession(session);
-    await setDoc(doc(db, "settings", "cashRegister"), session);
+    try {
+      await setDoc(doc(db, "settings", "cashRegister"), { ...session, updatedAt: new Date().toISOString() });
+    } catch (error) {
+      alert("La caisse n'a pas pu être synchronisée. Vérifiez la connexion et les droits administrateur.");
+      throw error;
+    }
   };
   const saveCustomer = async () => {
     if (!editingCustomer?.id) return;
