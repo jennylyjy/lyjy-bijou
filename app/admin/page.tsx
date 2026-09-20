@@ -1181,11 +1181,12 @@ function AdminPage() {
   const handleCashBarcodeScan = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
-    const code = cashBarcode.trim().toLowerCase();
+    const normalizeScanCode = (value: unknown) => String(value || "").normalize("NFKC").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const code = normalizeScanCode(cashBarcode);
     if (!code) return;
-    const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(value => String(value || "").toLowerCase() === code));
+    const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(value => normalizeScanCode(value) === code));
     if (article) { addCashItem(article); setCashBarcode(""); return; }
-    const variantMatch = articles.flatMap((item: any) => (Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ article: item, variant })) : [])).find(({ variant }: any) => [variant.barcode, variant.ean, variant.ref, variant.code].some(value => String(value || "").toLowerCase() === code));
+    const variantMatch = articles.flatMap((item: any) => (Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ article: item, variant })) : [])).find(({ variant }: any) => [variant.barcode, variant.ean, variant.ref, variant.code].some(value => normalizeScanCode(value) === code));
     if (variantMatch) { addCashItem(variantMatch.article, variantMatch.variant); setCashBarcode(""); return; }
     setCashSearch(cashBarcode.trim());
     alert(`Aucun article trouvé pour le code « ${cashBarcode.trim()} ».`);
