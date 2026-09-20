@@ -2530,12 +2530,14 @@ function AdminPage() {
                     <th className="pb-3 font-light">Nom / Prénom</th>
                     <th className="pb-3 font-light">E-mail</th>
                     <th className="pb-3 font-light">Adresse</th>
+                    <th className="pb-3 font-light">Code parrainage</th>
+                    <th className="pb-3 font-light">Utilisations</th>
                     <th className="pb-3 font-light text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-900/50">
                   {users.length === 0 ? (
-                    <tr><td colSpan={4} className="py-6 text-center text-stone-500 italic">Aucun client inscrit dans Firestore.</td></tr>
+                    <tr><td colSpan={6} className="py-6 text-center text-stone-500 italic">Aucun client inscrit dans Firestore.</td></tr>
                   ) : (
                     users.map((u) => (
                       <tr key={u.id} className="hover:bg-stone-900/10 transition-colors">
@@ -2544,6 +2546,8 @@ function AdminPage() {
                         <td className="py-4 text-stone-400">
                           {u.addressDetails ? `${u.addressDetails.street}, ${u.addressDetails.postalCode} ${u.addressDetails.city}` : u.address || "Aucune adresse"}
                         </td>
+                        <td className="py-4 font-mono text-[#C4A77D]">{u.referralCode || `LYJY-${String(u.id).slice(0, 6).toUpperCase()}`}</td>
+                        <td className="py-4 text-[#C4A77D]">{u.referralUses || orders.filter(order => order.referrerUid === u.id).length}</td>
                         <td className="py-4 text-right">
                           <button onClick={() => handleDeleteUser(u.id)} className="text-red-400 hover:text-red-300 p-2">
                             <Trash2 className="w-4 h-4" />

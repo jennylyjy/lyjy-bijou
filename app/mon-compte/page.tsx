@@ -385,6 +385,12 @@ export default function AccountPage() {
                 <p className="text-2xl font-serif">{currentUser.loyaltyPoints || 0} points</p>
                 <p className="text-[11px] text-stone-500 mt-1">1 point = 0,01 € de réduction sur votre prochaine commande.</p>
               </div>
+              <div className="p-4 border border-[#C4A77D]/40 bg-[#C4A77D]/5">
+                <h4 className="text-xs uppercase tracking-widest text-[#C4A77D] mb-1">Parrainage</h4>
+                <p className="text-sm text-stone-400">Votre code unique</p>
+                <p className="mt-1 font-mono text-xl tracking-widest text-[#C4A77D]">{currentUser.referralCode || `LYJY-${String(currentUser.uid || "").slice(0, 6).toUpperCase()}`}</p>
+                <p className="mt-2 text-[11px] text-stone-500">Utilisations : {currentUser.referralUses || 0}</p>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                 <div

@@ -207,6 +207,15 @@ const CartPage = () => {
   const hasShippableItems = items.some(item => !(item.options?.giftCard && item.options.deliveryType === "virtual"));
 
   useEffect(() => {
+    const savedReferral = localStorage.getItem("lyjy_referral_code");
+    if (savedReferral && !auth.currentUser) {
+      getDocs(query(collection(db, "users"), where("referralCode", "==", savedReferral))).then(snapshot => {
+        if (!snapshot.empty) setReferralCode({ code: savedReferral, uid: snapshot.docs[0].id });
+      }).catch(() => undefined);
+    }
+  }, []);
+
+  useEffect(() => {
     const loadLoyaltyPoints = async () => {
       if (!auth.currentUser) return setLoyaltyPoints(0);
       const snapshot = await getDoc(doc(db, "users", auth.currentUser.uid));
@@ -290,6 +299,9 @@ const CartPage = () => {
     setAppliedGiftCards,
   ] = useState<GiftCardData[]>([]);
 
+  const [referralCodeInput, setReferralCodeInput] = useState("");
+  const [referralCode, setReferralCode] = useState<{ code: string; uid: string } | null>(null);
+
   const subtotal = items.reduce(
     (
       sum,
@@ -300,6 +312,19 @@ const CartPage = () => {
     ),
     0,
   );
+
+  const handleApplyReferralCode = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (auth.currentUser) return setErrorMessage("Un compte déjà existant ne peut pas utiliser un code de parrainage.");
+    const normalized = referralCodeInput.trim().toUpperCase();
+    if (!normalized) return;
+    const snapshot = await getDocs(query(collection(db, "users"), where("referralCode", "==", normalized)));
+    if (snapshot.empty) return setErrorMessage("Ce code de parrainage n'existe pas.");
+    setReferralCode({ code: normalized, uid: snapshot.docs[0].id });
+    localStorage.setItem("lyjy_referral_code", normalized);
+    setReferralCodeInput("");
+    setSuccessMessage("Code de parrainage enregistré pour votre première commande.");
+  };
 
   const handleApplyCoupon = async (
     event: React.FormEvent,
@@ -1053,6 +1078,8 @@ const CartPage = () => {
               city:
                 "Fégréac",
             },
+          referralCode: !currentUser ? referralCode?.code || null : null,
+          referrerUid: !currentUser ? referralCode?.uid || null : null,
         };
 
         const cleanedOrderData =
@@ -1068,6 +1095,12 @@ const CartPage = () => {
             ),
             cleanedOrderData,
           );
+
+        const appliedReferralUid: string | null = !currentUser && referralCode ? referralCode!.uid : null;
+        if (appliedReferralUid) {
+          await updateDoc(doc(db, "users", String(appliedReferralUid)), { referralUses: increment(1) });
+          localStorage.removeItem("lyjy_referral_code");
+        }
 
         localStorage.setItem(
           "lyjy_last_order",
@@ -1738,6 +1771,14 @@ const CartPage = () => {
                   </button>
                 </div>
               )}
+
+              {!auth.currentUser && !referralCode && (
+                <form onSubmit={handleApplyReferralCode} className="flex gap-2 pt-2">
+                  <input type="text" placeholder="Code de parrainage (nouveau client)" value={referralCodeInput} onChange={event => setReferralCodeInput(event.target.value)} className="w-full p-2 border border-stone-700 bg-transparent uppercase" />
+                  <button type="submit" className="border border-[#C4A77D] text-[#C4A77D] px-4 uppercase font-medium">OK</button>
+                </form>
+              )}
+              {referralCode && <p className="border border-green-500/30 bg-green-500/10 p-2 text-green-400">Parrainage enregistré : {referralCode.code}</p>}
 
               <form
                 onSubmit={

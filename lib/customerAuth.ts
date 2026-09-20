@@ -14,6 +14,8 @@ export interface CustomerProfile {
     city?: string;
   };
   welcomeEmailSent?: boolean;
+  referralCode?: string;
+  referralUses?: number;
 }
 
 interface LegacyUser extends Omit<CustomerProfile, "uid"> {
@@ -27,6 +29,8 @@ const normalizeProfile = (uid: string, data: Partial<LegacyUser>, email: string)
   firstName: String(data.firstName || ""),
   lastName: String(data.lastName || ""),
   ...(data.welcomeEmailSent ? { welcomeEmailSent: true } : {}),
+  referralCode: String(data.referralCode || `LYJY-${uid.slice(0, 6).toUpperCase()}`),
+  referralUses: Number(data.referralUses) || 0,
   ...(data.addressDetails ? { addressDetails: data.addressDetails } : {}),
 });
 
@@ -51,7 +55,7 @@ const removeMigratedLegacyUser = (email: string) => {
 
 export async function registerCustomer(data: Omit<CustomerProfile, "uid">, password: string) {
   const credential = await createUserWithEmailAndPassword(auth, data.email.trim().toLowerCase(), password);
-  const profile = normalizeProfile(credential.user.uid, data, credential.user.email || data.email);
+  const profile = normalizeProfile(credential.user.uid, { ...data, referralCode: `LYJY-${credential.user.uid.slice(0, 6).toUpperCase()}` }, credential.user.email || data.email);
   await setDoc(doc(db, "users", credential.user.uid), { ...profile, createdAt: new Date().toISOString() });
   storeSafeProfile(profile);
   await signOut(auth);
@@ -65,7 +69,7 @@ export async function loginCustomer(email: string, password: string) {
     await credential.user.reload();
     const snapshot = await getDoc(doc(db, "users", credential.user.uid));
     const profile = normalizeProfile(credential.user.uid, snapshot.exists() ? snapshot.data() : {}, credential.user.email || normalizedEmail);
-    if (!snapshot.exists()) await setDoc(doc(db, "users", credential.user.uid), profile, { merge: true });
+    if (!snapshot.exists() || !snapshot.data()?.referralCode) await setDoc(doc(db, "users", credential.user.uid), { ...profile, referralCode: profile.referralCode, referralUses: Number(snapshot.data()?.referralUses) || 0 }, { merge: true });
     if (!profile.welcomeEmailSent) {
       await fetch("/api/welcome-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: profile.email, firstName: profile.firstName }) }).catch(() => undefined);
       profile.welcomeEmailSent = true;
