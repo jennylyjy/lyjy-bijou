@@ -192,6 +192,13 @@ function AdminPage() {
   }, [cashSession]);
 
   useEffect(() => {
+    if (!currentUser || !adminAllowed) return;
+    return onSnapshot(doc(db, "settings", "cashRegister"), snapshot => {
+      if (snapshot.exists()) setCashSession(snapshot.data());
+    });
+  }, [currentUser, adminAllowed]);
+
+  useEffect(() => {
     setStatsSince(Number(localStorage.getItem("lyjy_stats_since") || 0));
   }, []);
   useEffect(() => {
@@ -1142,6 +1149,10 @@ function AdminPage() {
   ];
   const countedCash = cashDenominations.reduce((sum, [value]) => sum + Number(value) * (cashDialogCounts[value] || 0), 0);
   const keypad = (value: string) => setCashDialogCode(current => `${current}${value}`.slice(0, 12));
+  const saveCashSession = async (session: any) => {
+    setCashSession(session);
+    await setDoc(doc(db, "settings", "cashRegister"), session);
+  };
   const addCashItem = (article: any, variant: any = null) => {
     const key = `${article.id}-${variant?.label || "article"}`;
     setCashCart((current) => {
@@ -1248,17 +1259,17 @@ function AdminPage() {
     if (cashSession?.status !== "closed") return;
     setCashDialog("open"); setCashDialogStep("code"); setCashDialogCode(""); setCashDialogConfirm(""); setCashDialogCounts({});
   };
-  const toggleCashPause = () => {
+  const toggleCashPause = async () => {
     if (cashSession?.status === "paused") {
       setCashDialog("pause"); setCashDialogStep("code"); setCashDialogCode("");
       return;
     }
-    if (cashSession?.status === "open") { setCashSession({ ...cashSession, status: "paused", pausedAt: new Date().toISOString() }); }
+    if (cashSession?.status === "open") { await saveCashSession({ ...cashSession, status: "paused", pausedAt: new Date().toISOString() }); }
   };
-  const confirmCashDialog = () => {
+  const confirmCashDialog = async () => {
     if (cashDialog === "pause") {
       if (cashDialogCode !== cashSession.code) return alert("Code caisse incorrect.");
-      setCashSession({ ...cashSession, status: "open", resumedAt: new Date().toISOString() });
+      await saveCashSession({ ...cashSession, status: "open", resumedAt: new Date().toISOString() });
       setCashDialog(null); return;
     }
     if (cashDialog === "open" && cashDialogStep === "code") {
@@ -1266,7 +1277,7 @@ function AdminPage() {
       setCashDialogStep("count"); setCashDialogCounts({}); return;
     }
     if (cashDialog === "open" && cashDialogStep === "count") {
-      setCashSession({ status: "open", code: cashDialogCode, openingCash: countedCash, openingCounts: cashDialogCounts, openedAt: new Date().toISOString() });
+      await saveCashSession({ status: "open", code: cashDialogCode, openingCash: countedCash, openingCounts: cashDialogCounts, openedAt: new Date().toISOString() });
       setCashDialog(null); setSuccessMessage(`Caisse ouverte avec ${countedCash.toFixed(2)} € de fond de caisse.`); setTimeout(() => setSuccessMessage(""), 3000);
     }
     if (cashDialog === "close" && cashDialogStep === "code") {
@@ -1297,7 +1308,7 @@ function AdminPage() {
       reportWindow.document.write(`<!doctype html><html><head><title>Clôture caisse LYJY</title><style>body{font-family:Arial,sans-serif;padding:32px;color:#222}h1{color:#9a773f}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:12px}th{background:#eee}.totals{margin-top:24px;line-height:1.8}</style></head><body><h1>LYJY ATELIER — Clôture de caisse</h1><p>Date : ${new Date().toLocaleString("fr-FR")}</p><p>Ouverture : ${new Date(cashSession.openedAt).toLocaleString("fr-FR")}</p><table><thead><tr><th>Heure</th><th>Ticket</th><th>Articles / références</th><th>Paiement</th><th>Total</th></tr></thead><tbody>${reportRows || `<tr><td colspan="5">Aucune vente caisse aujourd'hui</td></tr>`}</tbody></table><div class="totals"><strong>Total ventes : ${total.toFixed(2)} €</strong><br>${Object.entries(byMethod).map(([method, amount]) => `${method} : ${(amount as number).toFixed(2)} €`).join("<br>")}<br>Monnaie ouverture : ${Number(cashSession.openingCash || 0).toFixed(2)} €<br>Espèces attendues : ${expectedCash.toFixed(2)} €<br>Espèces comptées : ${finalCash.toFixed(2)} €<br>Écart de caisse : ${(finalCash - expectedCash).toFixed(2)} €</div><script>window.onload=()=>window.print()</script></body></html>`);
       reportWindow.document.close();
     }
-    setCashSession({ status: "closed", closedAt: new Date().toISOString(), finalCash, expectedCash });
+    await saveCashSession({ status: "closed", closedAt: new Date().toISOString(), finalCash, expectedCash });
     setSuccessMessage("Caisse clôturée et récapitulatif prêt à enregistrer en PDF."); setTimeout(() => setSuccessMessage(""), 4000);
   };
   const viewCashClosurePdf = (closure: any) => {
