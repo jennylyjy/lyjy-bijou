@@ -192,8 +192,11 @@ function AdminPage() {
   }, [currentUser, adminAllowed]);
 
   useEffect(() => {
-    setStatsSince(Number(localStorage.getItem("lyjy_stats_since") || 0));
-  }, []);
+    if (!currentUser || !adminAllowed) return;
+    return onSnapshot(doc(db, "settings", "statistics"), snapshot => {
+      if (snapshot.exists()) setStatsSince(Number(snapshot.data().since) || 0);
+    });
+  }, [currentUser, adminAllowed]);
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -1419,8 +1422,7 @@ function AdminPage() {
           onClick={() => {
             if (!window.confirm("Remettre à zéro le chiffre d’affaires et le nombre de commandes validées ? Les commandes resteront conservées dans l’onglet Commandes.")) return;
             const now = Date.now();
-            localStorage.setItem("lyjy_stats_since", String(now));
-            setStatsSince(now);
+            setDoc(doc(db, "settings", "statistics"), { since: now, updatedAt: new Date().toISOString() }).then(() => setStatsSince(now)).catch(() => alert("Impossible de synchroniser la remise à zéro."));
             setSuccessMessage("Statistiques remises à zéro.");
             setTimeout(() => setSuccessMessage(""), 3000);
           }}
