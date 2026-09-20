@@ -42,6 +42,7 @@ function AdminPage() {
   const [giftCards, setGiftCards] = useState<any[]>([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
+  const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
 
   // MODALE D'EXPÉDITION
   const [shippingOrder, setShippingOrder] = useState<any | null>(null);
@@ -1152,6 +1153,21 @@ function AdminPage() {
   const saveCashSession = async (session: any) => {
     setCashSession(session);
     await setDoc(doc(db, "settings", "cashRegister"), session);
+  };
+  const saveCustomer = async () => {
+    if (!editingCustomer?.id) return;
+    await updateDoc(doc(db, "users", editingCustomer.id), {
+      firstName: editingCustomer.firstName || "",
+      lastName: editingCustomer.lastName || "",
+      email: editingCustomer.email || "",
+      phone: editingCustomer.phone || "",
+      loyaltyPoints: Math.max(0, Number(editingCustomer.loyaltyPoints) || 0),
+      referralCode: editingCustomer.referralCode || "",
+      referralUses: Math.max(0, Number(editingCustomer.referralUses) || 0),
+      addressDetails: { street: editingCustomer.addressDetails?.street || "", complement: editingCustomer.addressDetails?.complement || "", postalCode: editingCustomer.addressDetails?.postalCode || "", city: editingCustomer.addressDetails?.city || "" },
+    });
+    setEditingCustomer(null);
+    setSuccessMessage("Informations client enregistrées."); setTimeout(() => setSuccessMessage(""), 3000);
   };
   const addCashItem = (article: any, variant: any = null) => {
     const key = `${article.id}-${variant?.label || "article"}`;
@@ -2599,7 +2615,7 @@ function AdminPage() {
                         <td className="py-4 font-mono text-[#C4A77D]">{u.referralCode || `LYJY-${String(u.id).slice(0, 6).toUpperCase()}`}</td>
                         <td className="py-4 text-[#C4A77D]">{u.referralUses || orders.filter(order => order.referrerUid === u.id).length}</td>
                         <td className="py-4 text-right">
-                          <button onClick={() => handleDeleteUser(u.id)} className="text-red-400 hover:text-red-300 p-2">
+                          <button onClick={() => setEditingCustomer({ ...u, addressDetails: { ...(u.addressDetails || {}) } })} className="mr-2 text-[#C4A77D] hover:text-white p-2" title="Modifier le client"><Edit className="w-4 h-4" /></button><button onClick={() => handleDeleteUser(u.id)} className="text-red-400 hover:text-red-300 p-2">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
@@ -2611,6 +2627,8 @@ function AdminPage() {
             </div>
           </div>
         )}
+
+        {editingCustomer && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"><div className="w-full max-w-2xl border border-[#C4A77D] bg-stone-950 p-6"><div className="mb-5 flex items-center justify-between"><h3 className="font-serif text-xl text-[#C4A77D]">Modifier le client</h3><button type="button" onClick={() => setEditingCustomer(null)}><X /></button></div><div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{([["firstName","Prénom"],["lastName","Nom"],["email","E-mail"],["phone","Téléphone"]] as const).map(([field,label]) => <label key={field} className="text-xs uppercase tracking-widest text-stone-500">{label}<input value={editingCustomer[field] || ""} onChange={event => setEditingCustomer((current: any) => ({ ...current, [field]: event.target.value }))} className="mt-1 w-full border border-stone-700 bg-black p-3 text-sm normal-case tracking-normal text-stone-100" /></label>)}<label className="text-xs uppercase tracking-widest text-stone-500 sm:col-span-2">Adresse<input value={editingCustomer.addressDetails?.street || ""} onChange={event => setEditingCustomer((current: any) => ({ ...current, addressDetails: { ...current.addressDetails, street: event.target.value } }))} className="mt-1 w-full border border-stone-700 bg-black p-3 text-sm normal-case tracking-normal" /></label>{([["postalCode","Code postal"],["city","Ville"],["complement","Complément"]] as const).map(([field,label]) => <label key={field} className="text-xs uppercase tracking-widest text-stone-500">{label}<input value={editingCustomer.addressDetails?.[field] || ""} onChange={event => setEditingCustomer((current: any) => ({ ...current, addressDetails: { ...current.addressDetails, [field]: event.target.value } }))} className="mt-1 w-full border border-stone-700 bg-black p-3 text-sm normal-case tracking-normal" /></label>)}<label className="text-xs uppercase tracking-widest text-stone-500">Points fidélité<input type="number" min="0" value={editingCustomer.loyaltyPoints || 0} onChange={event => setEditingCustomer((current: any) => ({ ...current, loyaltyPoints: event.target.value }))} className="mt-1 w-full border border-[#C4A77D] bg-black p-3 text-sm" /></label><label className="text-xs uppercase tracking-widest text-stone-500">Utilisations parrainage<input type="number" min="0" value={editingCustomer.referralUses || 0} onChange={event => setEditingCustomer((current: any) => ({ ...current, referralUses: event.target.value }))} className="mt-1 w-full border border-stone-700 bg-black p-3 text-sm" /></label><label className="text-xs uppercase tracking-widest text-stone-500 sm:col-span-2">Code parrainage<input value={editingCustomer.referralCode || ""} onChange={event => setEditingCustomer((current: any) => ({ ...current, referralCode: event.target.value.toUpperCase() }))} className="mt-1 w-full border border-stone-700 bg-black p-3 text-sm" /></label></div><button type="button" onClick={() => saveCustomer().catch(() => alert("Impossible d'enregistrer les modifications."))} className="mt-5 w-full bg-[#C4A77D] py-3 text-black uppercase">Enregistrer les modifications</button></div></div>}
 
         {/* MODALE SUR-MESURE D'EXPÉDITION ET SUIVI */}
         {shippingOrder && (
