@@ -1185,9 +1185,17 @@ function AdminPage() {
     const scannedValue = event.currentTarget.value || cashBarcode;
     const code = normalizeScanCode(scannedValue);
     if (!code) return;
-    const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(value => normalizeScanCode(value) === code));
+    const matchesScan = (value: unknown) => {
+      const candidate = normalizeScanCode(value);
+      if (!candidate) return false;
+      if (candidate === code || candidate.includes(code) || code.includes(candidate)) return true;
+      const scanDigits = code.replace(/\D/g, "");
+      const candidateDigits = candidate.replace(/\D/g, "");
+      return scanDigits.length >= 5 && candidateDigits.length >= 5 && (scanDigits.includes(candidateDigits) || candidateDigits.includes(scanDigits));
+    };
+    const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(matchesScan));
     if (article) { addCashItem(article); setCashBarcode(""); return; }
-    const variantMatch = articles.flatMap((item: any) => (Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ article: item, variant })) : [])).find(({ variant }: any) => [variant.barcode, variant.ean, variant.ref, variant.code].some(value => normalizeScanCode(value) === code));
+    const variantMatch = articles.flatMap((item: any) => (Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ article: item, variant })) : [])).find(({ variant }: any) => [variant.barcode, variant.ean, variant.ref, variant.code].some(matchesScan));
     if (variantMatch) { addCashItem(variantMatch.article, variantMatch.variant); setCashBarcode(""); return; }
     setCashSearch(scannedValue.trim());
     alert(`Aucun article trouvé pour le code « ${scannedValue.trim()} ».`);
