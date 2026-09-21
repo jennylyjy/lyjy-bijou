@@ -823,14 +823,14 @@ function AdminPage() {
         imageUrls = uploadedUrls;
       }
 
-      const generatedRef = `LYJY-${Math.floor(100000 + Math.random() * 900000)}`;
+      const generatedRef = `LYJY${Math.floor(100000 + Math.random() * 900000)}`;
       const variants: { ref: string; label: string; size: string; imageUrl: string; quantity: number; isAvailable: boolean }[] = [];
       for (let i = 0; i < articleVariants.length; i++) {
         const variant = articleVariants[i];
         if (!variant.label.trim() || !variant.file) continue;
         const storageRef = ref(storage, `articles/variants/${Date.now()}_${i}_${variant.file.name}`);
         const snapshot = await uploadBytes(storageRef, variant.file);
-        variants.push({ ref: `${generatedRef}-${String(variants.length + 1).padStart(2, "0")}`, label: variant.label.trim(), size: variant.size.trim(), imageUrl: await getDownloadURL(snapshot.ref), quantity: Math.max(0, parseInt(variant.quantity) || 0), isAvailable: true });
+        variants.push({ ref: `${generatedRef}${String(variants.length + 1).padStart(2, "0")}`, label: variant.label.trim(), size: variant.size.trim(), imageUrl: await getDownloadURL(snapshot.ref), quantity: Math.max(0, parseInt(variant.quantity) || 0), isAvailable: true });
       }
       const totalQuantity = variants.length > 0
         ? variants.reduce((total, variant) => total + variant.quantity, 0)
@@ -999,8 +999,9 @@ function AdminPage() {
           const snapshot = await uploadBytes(variantRef, variant.file);
           variantImageUrl = await getDownloadURL(snapshot.ref);
         }
+        const compactArticleRef = String(editingArticle.ref || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
         editedVariants.push({
-          ref: String(variant.ref || `${editingArticle.ref}-${String(editedVariants.length + 1).padStart(2, "0")}`),
+          ref: String(variant.ref || `${compactArticleRef}${String(editedVariants.length + 1).padStart(2, "0")}`).replace(/[^A-Za-z0-9]/g, "").toUpperCase(),
           label: String(variant.label).trim(),
           size: String(variant.size || "").trim(),
           imageUrl: variantImageUrl,
@@ -1012,6 +1013,7 @@ function AdminPage() {
 
       const articleRef = doc(db, "articles", editingArticle.id);
       const updatedData: any = {
+        ref: String(editingArticle.ref || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase(),
         title: editingArticle.title,
         description: editingArticle.description || "",
         price: pPrice,
