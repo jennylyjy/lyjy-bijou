@@ -1210,9 +1210,10 @@ function AdminPage() {
       if (!candidate) return false;
       return candidate === code;
     };
-    const variantMatch = articles.flatMap((item: any) => (Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ article: item, variant })) : [])).find(({ variant }: any) => [variant.barcode, variant.ean, variant.ref, variant.code].some(matchesScan));
+    const matchesReference = (value: unknown) => formatCatalogRef(value) === code || matchesScan(value);
+    const variantMatch = articles.flatMap((item: any) => (Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ article: item, variant })) : [])).find(({ variant }: any) => [variant.barcode, variant.ean, variant.ref, variant.code].some(matchesReference));
     if (variantMatch) { addCashItem(variantMatch.article, variantMatch.variant); return; }
-      const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(matchesScan));
+    const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(matchesReference));
     if (article) { addCashItem(article); return; }
     setCashSearch(String(scannedValue).replace(/[\u0000-\u001F\u007F]/g, "").trim());
     alert(`Aucun article trouvé pour le code « ${code} ».`);
