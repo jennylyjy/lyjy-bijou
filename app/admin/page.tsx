@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   Sun, Moon, Shield, Trash2, Check, Package, Clock, 
   Send, CheckCircle2, FileText, X, Plus, Eye, EyeOff, Edit, Lock, LogOut, Truck,
-  Tag, TrendingUp, AlertTriangle, Euro, Calendar, Users, Wand2, Gift, Sparkles, Settings
+  Tag, TrendingUp, AlertTriangle, Euro, Calendar, Users, Wand2, Gift, Sparkles, Settings, ChevronDown, ChevronUp
 } from "lucide-react";
 import { useThemeStore } from "../../store/useThemeStore";
 import { db, storage, auth } from "../../lib/firebase";
@@ -82,6 +82,7 @@ function AdminPage() {
   const [articleVariants, setArticleVariants] = useState<{ label: string; size: string; file: File | null; quantity: string }[]>([]);
   const [articleFilterCategory, setArticleFilterCategory] = useState("all");
   const [articleSearchRef, setArticleSearchRef] = useState("");
+  const [expandedArticleIds, setExpandedArticleIds] = useState<string[]>([]);
   const [isSubmittingArticle, setIsSubmittingArticle] = useState(false);
   const [cashSearch, setCashSearch] = useState("");
   const [cashBarcode, setCashBarcode] = useState("");
@@ -1797,7 +1798,11 @@ function AdminPage() {
                     {filteredArticles.length === 0 ? (
                       <tr><td colSpan={7} className="py-8 text-center text-stone-500 italic">Aucun article dans cette catégorie.</td></tr>
                     ) : (
-                      filteredArticles.map((art) => (
+                      filteredArticles.map((art) => {
+                        const variants = Array.isArray(art.variants) ? art.variants : [];
+                        const isExpanded = expandedArticleIds.includes(art.id);
+                        return (
+                        <Fragment key={art.id}>
                         <tr key={art.id} className="hover:bg-stone-900/10 transition-colors">
                           <td className="py-4">
                             <div className="flex items-center gap-1">
@@ -1832,6 +1837,17 @@ function AdminPage() {
                             </span>
                           </td>
                           <td className="py-4 text-right space-x-2">
+                            {variants.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedArticleIds((ids) => ids.includes(art.id) ? ids.filter((id) => id !== art.id) : [...ids, art.id])}
+                                className="p-2 border border-stone-600 text-stone-300 hover:border-[#C4A77D] hover:text-[#C4A77D]"
+                                title={isExpanded ? "Masquer les variantes" : "Afficher les variantes"}
+                                aria-label={isExpanded ? "Masquer les variantes" : "Afficher les variantes"}
+                              >
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              </button>
+                            )}
                             <button
                               onClick={() => setEditingArticle(art)}
                               className="p-2 border border-stone-600 text-stone-300 hover:border-[#C4A77D] hover:text-[#C4A77D]"
@@ -1857,7 +1873,26 @@ function AdminPage() {
                             </button>
                           </td>
                         </tr>
-                      ))
+                        {isExpanded && (
+                          <tr key={`${art.id}-variants`} className={isDayMode ? "bg-stone-100" : "bg-black/40"}>
+                            <td colSpan={7} className="px-4 pb-4">
+                              <div className="border-l-2 border-[#C4A77D]/50 ml-5 pl-4 py-2 space-y-2">
+                                <p className="text-[10px] uppercase tracking-widest text-[#C4A77D]">Variantes de l’article</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {variants.map((variant: any, index: number) => (
+                                    <div key={`${variant.ref || variant.label || "variant"}-${index}`} className="flex items-center justify-between gap-3 border border-stone-800 px-3 py-2 text-xs">
+                                      <span className="text-stone-300">{variant.label || "Variante"}{variant.size ? ` · Taille : ${variant.size}` : ""}</span>
+                                      <span className="font-mono text-[#C4A77D] whitespace-nowrap">{variant.ref || `${art.ref}-${String(index + 1).padStart(2, "0")}`}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </Fragment>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
