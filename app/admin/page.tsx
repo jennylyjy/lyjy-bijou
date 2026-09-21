@@ -1186,7 +1186,10 @@ function AdminPage() {
     if (event.key !== "Enter") return;
     event.preventDefault();
     const normalizeScanCode = (value: unknown) => String(value || "").normalize("NFKC").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const scannedValue = event.currentTarget.value || cashBarcode;
+    // La scanette envoie la valeur directement dans le champ. Ne jamais
+    // reprendre `cashBarcode` ici : lors de deux scans rapides, cela pouvait
+    // réutiliser la référence du scan précédent.
+    const scannedValue = event.currentTarget.value;
     const code = normalizeScanCode(scannedValue);
     event.currentTarget.value = "";
     setCashBarcode("");
@@ -1196,10 +1199,10 @@ function AdminPage() {
       if (!candidate) return false;
       return candidate === code;
     };
-    const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(matchesScan));
-    if (article) { addCashItem(article); return; }
     const variantMatch = articles.flatMap((item: any) => (Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ article: item, variant })) : [])).find(({ variant }: any) => [variant.barcode, variant.ean, variant.ref, variant.code].some(matchesScan));
     if (variantMatch) { addCashItem(variantMatch.article, variantMatch.variant); return; }
+    const article = articles.find((item: any) => [item.ref, item.barcode, item.ean, item.code].some(matchesScan));
+    if (article) { addCashItem(article); return; }
     setCashSearch(scannedValue.trim());
     alert(`Aucun article trouvé pour le code « ${scannedValue.trim()} ».`);
     setCashBarcode("");
