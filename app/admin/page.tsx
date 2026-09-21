@@ -21,6 +21,13 @@ import AdminLoginPanel from "@/components/admin/AdminLoginPanel";
 import AdminTutorial from "@/components/admin/AdminTutorial";
 
 const formatCatalogRef = (value: unknown) => String(value || "").replace(/^LYJY[-_]?/i, "").replace(/[^0-9]/g, "");
+const code39Patterns: Record<string, string> = { "0":"101001101101", "1":"110100101011", "2":"101100101011", "3":"110110010101", "4":"101001101011", "5":"110100110101", "6":"101100110101", "7":"101001011011", "8":"110100101101", "9":"101100101101", "*":"100101101101" };
+const barcodeSvg = (value: string) => {
+  const pattern = `*${value}*`.split("").map(char => code39Patterns[char] || "").join("0");
+  const width = pattern.length * 3 + 40;
+  const rects = pattern.split("").map((bar, index) => bar === "1" ? `<rect x="${20 + index * 3}" y="10" width="3" height="90"/>` : "").join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="130" viewBox="0 0 ${width} 130"><rect width="100%" height="100%" fill="white"/><g fill="black">${rects}</g><text x="${width / 2}" y="120" text-anchor="middle" font-family="Arial" font-size="16">${value}</text></svg>`;
+};
 
 function AdminPage() {
   const { isDayMode, toggleDayMode } = useThemeStore();
@@ -85,6 +92,7 @@ function AdminPage() {
   const [articleFilterCategory, setArticleFilterCategory] = useState("all");
   const [articleSearchRef, setArticleSearchRef] = useState("");
   const [expandedArticleIds, setExpandedArticleIds] = useState<string[]>([]);
+  const [codeSearch, setCodeSearch] = useState("");
   const [isSubmittingArticle, setIsSubmittingArticle] = useState(false);
   const [cashSearch, setCashSearch] = useState("");
   const [cashBarcode, setCashBarcode] = useState("");
@@ -1152,6 +1160,16 @@ function AdminPage() {
     ["0.01", "1 ct"], ["0.02", "2 ct"], ["0.05", "5 ct"], ["0.10", "10 ct"], ["0.20", "20 ct"], ["0.50", "50 ct"],
     ["1", "1 €"], ["2", "2 €"], ["5", "5 €"], ["10", "10 €"], ["20", "20 €"], ["50", "50 €"], ["100", "100 €"], ["200", "200 €"], ["500", "500 €"]
   ];
+  const codeItems = articles.filter((article: any) => !article.isCustomGiftCard && !article.isAdvent && article.category !== "calendrier-avent").flatMap((article: any) => {
+    const parent = { id: `${article.id}-article`, title: article.title, ref: formatCatalogRef(article.ref), label: "Article", imageUrl: article.imageUrl };
+    const variants = Array.isArray(article.variants) ? article.variants.map((variant: any, index: number) => ({ id: `${article.id}-variant-${index}`, title: article.title, ref: formatCatalogRef(variant.ref || `${article.ref}${String(index + 1).padStart(2, "0")}`), label: variant.label || `Variante ${index + 1}`, imageUrl: variant.imageUrl })) : [];
+    return [parent, ...variants];
+  }).filter((item: any) => item.ref && item.ref.includes(codeSearch.replace(/\D/g, "")));
+  const downloadBarcode = (item: any) => {
+    const svg = barcodeSvg(item.ref);
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    const link = document.createElement("a"); link.href = url; link.download = `code-barres-${item.ref}.svg`; link.click(); URL.revokeObjectURL(url);
+  };
   const countedCash = cashDenominations.reduce((sum, [value]) => sum + Number(value) * (cashDialogCounts[value] || 0), 0);
   const keypad = (value: string) => setCashDialogCode(current => `${current}${value}`.slice(0, 12));
   const saveCashSession = async (session: any) => {
@@ -1512,6 +1530,9 @@ function AdminPage() {
           >
             Inscrits ({users.length})
           </button>
+          <button onClick={() => setActiveTab("codes")} className={`pb-2 transition-colors ${activeTab === "codes" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>
+            Codes / QR ({codeItems.length})
+          </button>
           <button onClick={() => setActiveTab("cashier")} className={`pb-2 transition-colors ${activeTab === "cashier" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Caisse</button>
         </div>
 
@@ -1524,6 +1545,23 @@ function AdminPage() {
         {activeTab === "cashier" && lastCashSale && <div className="border border-green-500/30 bg-green-500/10 p-4 space-y-3"><p className="text-sm text-green-400">Vente terminée. Que souhaitez-vous faire du ticket ?</p><div className="flex flex-col md:flex-row gap-2"><button type="button" onClick={copyCashTicket} className="border border-[#C4A77D] px-4 py-2 text-xs uppercase">Copier le ticket</button><input type="email" value={cashTicketEmail} onChange={(e) => setCashTicketEmail(e.target.value)} placeholder="E-mail du client" className="flex-1 border border-stone-700 bg-black px-3 py-2 text-sm" /><button type="button" onClick={() => emailCashTicket().catch((error) => alert(error.message))} disabled={!cashTicketEmail.trim()} className="bg-[#C4A77D] px-4 py-2 text-xs uppercase text-black disabled:opacity-50">Envoyer par e-mail</button></div></div>}
 
         {activeTab === "tutorial" && <AdminTutorial />}
+
+        {activeTab === "codes" && <section className={`p-6 border space-y-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div><h2 className="font-serif text-2xl text-[#C4A77D]">Codes-barres et QR codes</h2><p className="text-xs text-stone-500 mt-1">Télécharge les codes de chaque article et de chaque variante.</p></div>
+            <input value={codeSearch} onChange={(e) => setCodeSearch(e.target.value)} placeholder="Rechercher une référence..." className="border border-stone-800 bg-black p-3 text-sm" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {codeItems.map((item: any) => {
+              const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(item.ref)}`;
+              return <div key={item.id} className="border border-stone-800 p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-3"><img src={item.imageUrl || "/logo.png"} alt="" className="h-12 w-12 object-cover border border-stone-700" /><div><p className="text-[#C4A77D]">{item.title}</p><p className="text-xs text-stone-500">{item.label} · Réf. {item.ref}</p></div></div>
+                <div className="flex items-center justify-center gap-6 bg-white p-3"><div><svg xmlns="http://www.w3.org/2000/svg" width="190" height="100" viewBox="0 0 190 100"><rect width="190" height="100" fill="white"/><g fill="black">{item.ref.split("").map((digit: string, index: number) => <rect key={index} x={10 + index * 12} y="8" width="6" height="70" />)}</g><text x="95" y="93" textAnchor="middle" fontSize="13" fill="black">{item.ref}</text></svg></div><img src={qrUrl} alt={`QR ${item.ref}`} className="h-24 w-24" /></div>
+                <div className="flex flex-wrap gap-2"><button type="button" onClick={() => downloadBarcode(item)} className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Télécharger code-barres</button><a href={qrUrl} download={`qr-${item.ref}.png`} target="_blank" rel="noreferrer" className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Télécharger QR code</a></div>
+              </div>;
+            })}
+          </div>
+        </section>}
 
         {activeTab === "cashier" && <section className={`p-6 border grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
           <div>
