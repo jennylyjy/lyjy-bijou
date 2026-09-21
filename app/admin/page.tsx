@@ -1192,7 +1192,7 @@ function AdminPage() {
     const normalizeScanCode = (value: unknown) => {
       // Certains scanners sont configurés en clavier US alors que Windows
       // est en AZERTY : les chiffres arrivent alors sous forme de & é " ' ( - è _ ç à.
-      const azertyDigits: Record<string, string> = { "&": "1", "é": "2", "\"": "3", "'": "4", "(": "5", "-": "6", "è": "7", "_": "8", "ç": "9", "à": "0", ")": "-" };
+      const azertyDigits: Record<string, string> = { "&": "1", "é": "2", "\"": "3", "'": "4", "(": "5", "-": "6", "è": "7", "_": "8", "\\": "8", "ç": "9", "à": "0", "²": "0", ")": "-" };
       const raw = String(value || "").normalize("NFKC").replace(/[\u0000-\u001F\u007F]/g, "").trim();
       const decoded = [...raw].map(character => azertyDigits[character] ?? character).join("");
       return decoded.toUpperCase().replace(/^LYJY[-_]?/, "").replace(/[^0-9]/g, "");
