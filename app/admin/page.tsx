@@ -1161,14 +1161,21 @@ function AdminPage() {
     ["1", "1 €"], ["2", "2 €"], ["5", "5 €"], ["10", "10 €"], ["20", "20 €"], ["50", "50 €"], ["100", "100 €"], ["200", "200 €"], ["500", "500 €"]
   ];
   const codeItems = articles.filter((article: any) => !article.isCustomGiftCard && !article.isAdvent && article.category !== "calendrier-avent").flatMap((article: any) => {
-    const parent = { id: `${article.id}-article`, title: article.title, ref: formatCatalogRef(article.ref), label: "Article", imageUrl: article.imageUrl };
-    const variants = Array.isArray(article.variants) ? article.variants.map((variant: any, index: number) => ({ id: `${article.id}-variant-${index}`, title: article.title, ref: formatCatalogRef(variant.ref || `${article.ref}${String(index + 1).padStart(2, "0")}`), label: variant.label || `Variante ${index + 1}`, imageUrl: variant.imageUrl })) : [];
+    const parent = { id: `${article.id}-article`, title: article.title, ref: formatCatalogRef(article.ref), label: "Article", imageUrl: article.imageUrl, quantity: Number(article.quantity) || 0 };
+    const variants = Array.isArray(article.variants) ? article.variants.map((variant: any, index: number) => ({ id: `${article.id}-variant-${index}`, title: article.title, ref: formatCatalogRef(variant.ref || `${article.ref}${String(index + 1).padStart(2, "0")}`), label: variant.label || `Variante ${index + 1}`, imageUrl: variant.imageUrl, quantity: Number(variant.quantity) || 0 })) : [];
     return [parent, ...variants];
   }).filter((item: any) => item.ref && item.ref.includes(codeSearch.replace(/\D/g, "")));
   const downloadBarcode = (item: any) => {
     const svg = barcodeSvg(item.ref);
     const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
     const link = document.createElement("a"); link.href = url; link.download = `code-barres-${item.ref}.svg`; link.click(); URL.revokeObjectURL(url);
+  };
+  const downloadReferencesPdf = () => {
+    const rows = codeItems.map((item: any) => `<tr><td>${item.ref}</td><td>${item.title}</td><td>${item.label}</td><td>${item.quantity}</td></tr>`).join("");
+    const report = `<html><head><title>Références et stocks LYJY</title><style>body{font-family:Arial;padding:30px;color:#222}h1{color:#9a773f}p{color:#666}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #bbb;padding:9px;text-align:left}th{background:#eee}</style></head><body><h1>LYJY Atelier — Références et stocks</h1><p>Généré le ${new Date().toLocaleString("fr-FR")}</p><table><thead><tr><th>Référence</th><th>Article</th><th>Type / variante</th><th>Quantité</th></tr></thead><tbody>${rows || `<tr><td colspan="4">Aucune référence</td></tr>`}</tbody></table><script>window.onload=()=>window.print()</script></body></html>`;
+    const reportWindow = window.open("", "_blank", "width=900,height=700");
+    if (!reportWindow) return alert("Autorisez les fenêtres pop-up pour générer le PDF.");
+    reportWindow.document.write(report); reportWindow.document.close();
   };
   const countedCash = cashDenominations.reduce((sum, [value]) => sum + Number(value) * (cashDialogCounts[value] || 0), 0);
   const keypad = (value: string) => setCashDialogCode(current => `${current}${value}`.slice(0, 12));
@@ -1549,6 +1556,7 @@ function AdminPage() {
         {activeTab === "codes" && <section className={`p-6 border space-y-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div><h2 className="font-serif text-2xl text-[#C4A77D]">Codes-barres et QR codes</h2><p className="text-xs text-stone-500 mt-1">Télécharge les codes de chaque article et de chaque variante.</p></div>
+            <button type="button" onClick={downloadReferencesPdf} className="border border-[#C4A77D] px-4 py-3 text-xs uppercase tracking-widest">PDF références + quantités</button>
             <input value={codeSearch} onChange={(e) => setCodeSearch(e.target.value)} placeholder="Rechercher une référence..." className="border border-stone-800 bg-black p-3 text-sm" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
