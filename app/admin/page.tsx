@@ -82,6 +82,8 @@ function AdminPage() {
   // CRÉATION & ÉDITION D'ARTICLE (MULTIPLE PHOTOS)
   const [articleTitle, setArticleTitle] = useState("");
   const [articleDescription, setArticleDescription] = useState("");
+  const [articleSeoTitle, setArticleSeoTitle] = useState("");
+  const [articleSeoDescription, setArticleSeoDescription] = useState("");
   const [articlePrice, setArticlePrice] = useState("");
   const [articleReduction, setArticleReduction] = useState("0");
   const [articleQuantity, setArticleQuantity] = useState("");
@@ -867,6 +869,8 @@ function AdminPage() {
         ref: generatedRef,
         title: articleTitle,
         description: articleDescription,
+        seoTitle: articleSeoTitle.trim() || articleTitle.trim(),
+        seoDescription: articleSeoDescription.trim() || articleDescription.trim().slice(0, 160),
         price: parsedPrice,
         reduction: parsedReduction,
         finalPrice: calculatedFinalPrice,
@@ -1043,6 +1047,8 @@ function AdminPage() {
         ref: String(editingArticle.ref || "").replace(/^LYJY[-_]?/i, "").replace(/[^0-9]/g, ""),
         title: editingArticle.title,
         description: editingArticle.description || "",
+        seoTitle: editingArticle.seoTitle || editingArticle.title || "",
+        seoDescription: editingArticle.seoDescription || editingArticle.description || "",
         price: pPrice,
         reduction: pRed,
         finalPrice: fPrice,
@@ -1363,6 +1369,7 @@ function AdminPage() {
           }
         }
       });
+      await Promise.all(cashCart.filter((item: any) => !item.manual).map((item: any) => addDoc(collection(db, "stockMovements"), { articleId: item.articleId, articleTitle: item.title, type: "sale", quantity: -Math.abs(Number(item.quantity) || 0), reason: `Vente caisse ${cashPaymentMethod}`, reference: item.ref || "", createdAt: new Date().toISOString() })));
       const earnedPoints = Math.floor(cashTotal);
       const usedPoints = Math.min(Number(cashCustomer?.loyaltyPoints) || 0, Math.floor(cashLoyaltyDiscount * 100));
       const sale = { ticketNumber: `CAISSE-${Date.now().toString().slice(-6)}`, items: cashCart, subtotal: cashGrossTotal, total: cashTotal, loyaltyPointsEarned: earnedPoints, loyaltyPointsUsed: usedPoints, customerUid: cashCustomer?.pending ? null : cashCustomer?.id || null, customerName: cashCustomer ? `${cashCustomer.firstName || ""} ${cashCustomer.lastName || ""}`.trim() : "Client comptoir", customerEmail: cashCustomer?.email || "", paymentMethod: cashPaymentMethod, amountReceived: cashPaymentMethod === "Espèces" ? Number(cashAmountReceived) || cashTotal : cashTotal, change: cashPaymentMethod === "Espèces" ? cashChange : 0, status: "validated", source: "caisse", sessionId: cashSession.openedAt, createdAt: new Date().toISOString() };
@@ -2946,6 +2953,7 @@ function AdminPage() {
                   </div>
                 )}
 
+                <div className="grid grid-cols-1 gap-3 border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-[#C4A77D]">Référencement SEO</p><input value={editingArticle.seoTitle || ""} onChange={(e) => setEditingArticle({ ...editingArticle, seoTitle: e.target.value })} placeholder="Titre SEO" className={`w-full p-3 border text-sm ${isDayMode ? "bg-white border-stone-300" : "bg-black border-stone-800"}`} /><textarea rows={2} value={editingArticle.seoDescription || ""} onChange={(e) => setEditingArticle({ ...editingArticle, seoDescription: e.target.value })} placeholder="Description SEO" className={`w-full p-3 border text-sm ${isDayMode ? "bg-white border-stone-300" : "bg-black border-stone-800"}`} /></div>
                 <div className="flex justify-end gap-3 pt-4 border-t border-stone-800">
                   <button 
                     type="button" 
@@ -3067,6 +3075,7 @@ function AdminPage() {
                     </div>
                   )}
                 </div>
+                <div className="grid grid-cols-1 gap-3 border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-[#C4A77D]">Référencement SEO</p><input value={articleSeoTitle} onChange={(e) => setArticleSeoTitle(e.target.value)} placeholder="Titre SEO (facultatif)" className={`w-full p-3 border text-sm ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-black border-stone-800 text-stone-100"}`} /><textarea rows={2} value={articleSeoDescription} onChange={(e) => setArticleSeoDescription(e.target.value)} placeholder="Description SEO (160 caractères conseillés)" className={`w-full p-3 border text-sm ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-black border-stone-800 text-stone-100"}`} /></div>
 
                 <div className={`border p-4 space-y-4 ${isDayMode ? "border-stone-300 bg-stone-50" : "border-stone-800 bg-black"}`}>
                   <div>
