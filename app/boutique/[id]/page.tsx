@@ -181,8 +181,8 @@ export default function ArticleDetailPage() {
       <div className="max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
         {/* Galerie Photos */}
         <div className="space-y-4">
-          <div className="aspect-square border border-stone-800 bg-stone-900 overflow-hidden">
-            <button type="button" onClick={() => setZoomOpen(true)} className="w-full h-full cursor-zoom-in"><img src={activeImage} alt={article.title} loading="eager" decoding="async" className="w-full h-full object-cover" /></button>
+          <div className="group aspect-square border border-stone-800 bg-stone-900 overflow-hidden">
+            <button type="button" onClick={() => setZoomOpen(true)} className="h-full w-full cursor-zoom-in"><img src={activeImage} alt={article.title} loading="eager" decoding="async" className="h-full w-full origin-center object-cover transition-transform duration-300 ease-out group-hover:scale-150" /></button>
           </div>
           {galleryImages.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
