@@ -182,7 +182,7 @@ export default function ArticleDetailPage() {
         {/* Galerie Photos */}
         <div className="space-y-4">
           <div className="group aspect-square border border-stone-800 bg-stone-900 overflow-hidden">
-            <button type="button" onClick={() => setZoomOpen(true)} className="h-full w-full cursor-zoom-in"><img src={activeImage} alt={article.title} loading="eager" decoding="async" className="h-full w-full origin-center object-cover transition-transform duration-300 ease-out group-hover:scale-150" /></button>
+            <button type="button" onClick={() => setZoomOpen(true)} className="h-full w-full cursor-zoom-in"><img src={activeImage} alt={article.title} onError={(event) => { event.currentTarget.src = "/logo.png"; }} loading="eager" decoding="async" className="h-full w-full origin-center object-cover transition-transform duration-300 ease-out group-hover:scale-150" /></button>
           </div>
           {galleryImages.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
@@ -196,7 +196,7 @@ export default function ArticleDetailPage() {
                   }}
                   className={`w-16 h-16 border flex-shrink-0 overflow-hidden transition-all ${!selectedVariant && activeImage === img ? "border-[#C4A77D] opacity-100" : "border-stone-800 opacity-60 hover:opacity-100"}`}
                 >
-                    <img src={img} alt="miniature" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                    <img src={img} alt="miniature" onError={(event) => { event.currentTarget.src = "/logo.png"; }} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -278,7 +278,7 @@ export default function ArticleDetailPage() {
         </div>
       </div>
       <section className="max-w-5xl mx-auto w-full mt-12 border-t border-stone-800 pt-8 space-y-5"><h2 className="font-serif text-xl text-[#C4A77D]">Avis clients ({reviews.length})</h2>{auth.currentUser && <div className="space-y-2"><div className="flex gap-2">{[1,2,3,4,5].map(value => <button type="button" key={value} onClick={() => setReviewRating(value)} className={value <= reviewRating ? "text-[#C4A77D] text-xl" : "text-stone-600 text-xl"}>★</button>)}</div>{verifiedBuyer && <p className="text-xs text-green-400">✓ Achat vérifié</p>}<textarea value={reviewText} onChange={e => setReviewText(e.target.value)} placeholder="Votre avis après votre achat" className="w-full p-3 bg-black border border-stone-700" /><input type="file" accept="image/*" onChange={e => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setReviewPhoto(String(reader.result)); reader.readAsDataURL(file); }} className="text-xs" /><button type="button" onClick={submitReview} className="px-4 py-2 bg-[#C4A77D] text-black uppercase text-xs">Publier</button></div>}{reviews.map(review => <article key={review.id} className="border-b border-stone-800 pb-3"><div className="text-[#C4A77D]">{"★".repeat(review.rating || 0)}</div><p className="text-stone-300">{review.text}</p>{review.photoUrl && <img src={review.photoUrl} alt="Photo client" className="mt-2 h-24 w-24 object-cover" />}{review.verifiedPurchase && <small className="mr-2 text-green-400">✓ Achat vérifié</small>}<small className="text-stone-500">{review.userName}</small></article>)}</section>
-      {relatedArticles.length > 0 && <section className="max-w-5xl mx-auto w-full mt-12 border-t border-stone-800 pt-8"><h2 className="font-serif text-xl text-[#C4A77D]">Vous aimerez aussi</h2><div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">{relatedArticles.map(item => <Link key={item.id} href={`/boutique/${item.id}`} className="border border-stone-800 p-2"><img src={item.imageUrl || "/logo.png"} alt={item.title} loading="lazy" className="aspect-square w-full object-cover" /><p className="mt-2 text-xs text-[#C4A77D]">{item.title}</p></Link>)}</div></section>}
+      {relatedArticles.length > 0 && <section className="max-w-5xl mx-auto w-full mt-12 border-t border-stone-800 pt-8"><h2 className="font-serif text-xl text-[#C4A77D]">Vous aimerez aussi</h2><div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">{relatedArticles.map(item => <Link key={item.id} href={`/boutique/${item.id}`} className="border border-stone-800 p-2"><img src={item.imageUrl || "/logo.png"} alt={item.title} onError={(event) => { event.currentTarget.src = "/logo.png"; }} loading="lazy" className="aspect-square w-full object-cover" /><p className="mt-2 text-xs text-[#C4A77D]">{item.title}</p></Link>)}</div></section>}
       {zoomOpen && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-6" onClick={() => setZoomOpen(false)}><img src={activeImage} alt={article.title} className="max-h-[90vh] max-w-[90vw] object-contain" /></div>}
     </main>
   );
