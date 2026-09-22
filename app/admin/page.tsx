@@ -49,6 +49,7 @@ function AdminPage() {
   const [articles, setArticles] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [giftCards, setGiftCards] = useState<any[]>([]);
+  const [stockMovements, setStockMovements] = useState<any[]>([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
@@ -248,6 +249,9 @@ function AdminPage() {
     const unsubGiftCards = onSnapshot(collection(db, "giftCards"), (snapshot) => {
       setGiftCards(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
+    const unsubStockMovements = onSnapshot(query(collection(db, "stockMovements"), orderBy("createdAt", "desc")), (snapshot) => {
+      setStockMovements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).slice(0, 200));
+    }, () => setStockMovements([]));
 
     const unsubVirtualAdvents = onSnapshot(collection(db, "virtualAdventCalendars"), (snapshot) => {
       setVirtualAdventCalendars(snapshot.docs.map(calendarDoc => ({ id: calendarDoc.id, ...calendarDoc.data() })));
@@ -291,6 +295,7 @@ function AdminPage() {
       unsubUsers();
       unsubCoupons();
       unsubGiftCards();
+      unsubStockMovements();
       unsubVirtualAdvents();
       unsubCashClosures();
       unsubCatalogTaxonomy();
@@ -1073,6 +1078,7 @@ function AdminPage() {
       }
 
       await updateDoc(articleRef, updatedData);
+      await addDoc(collection(db, "stockMovements"), { articleId: editingArticle.id, articleTitle: editingArticle.title, type: "adjustment", quantity: updatedData.quantity, reason: "Modification article", createdAt: new Date().toISOString() });
 
       setSuccessMessage("Article mis à jour !");
       setEditingArticle(null);
@@ -1554,6 +1560,7 @@ function AdminPage() {
           <button onClick={() => setActiveTab("codes")} className={`pb-2 transition-colors ${activeTab === "codes" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>
             Codes / QR ({codeItems.length})
           </button>
+          <button onClick={() => setActiveTab("stockHistory")} className={`pb-2 transition-colors ${activeTab === "stockHistory" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Historique stock</button>
           <button onClick={() => setActiveTab("cashier")} className={`pb-2 transition-colors ${activeTab === "cashier" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Caisse</button>
         </div>
 
@@ -1566,6 +1573,8 @@ function AdminPage() {
         {activeTab === "cashier" && lastCashSale && <div className="border border-green-500/30 bg-green-500/10 p-4 space-y-3"><p className="text-sm text-green-400">Vente terminée. Que souhaitez-vous faire du ticket ?</p><div className="flex flex-col md:flex-row gap-2"><button type="button" onClick={copyCashTicket} className="border border-[#C4A77D] px-4 py-2 text-xs uppercase">Copier le ticket</button><input type="email" value={cashTicketEmail} onChange={(e) => setCashTicketEmail(e.target.value)} placeholder="E-mail du client" className="flex-1 border border-stone-700 bg-black px-3 py-2 text-sm" /><button type="button" onClick={() => emailCashTicket().catch((error) => alert(error.message))} disabled={!cashTicketEmail.trim()} className="bg-[#C4A77D] px-4 py-2 text-xs uppercase text-black disabled:opacity-50">Envoyer par e-mail</button></div></div>}
 
         {activeTab === "tutorial" && <AdminTutorial />}
+
+        {activeTab === "stockHistory" && <section className={`p-6 border space-y-5 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}><h2 className="font-serif text-2xl text-[#C4A77D]">Historique des mouvements de stock</h2>{stockMovements.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-stone-800 text-xs uppercase text-stone-500"><th className="p-3">Date</th><th className="p-3">Article</th><th className="p-3">Type</th><th className="p-3">Quantité</th><th className="p-3">Motif</th></tr></thead><tbody>{stockMovements.map((movement: any) => <tr key={movement.id} className="border-b border-stone-900"><td className="p-3 text-stone-500">{movement.createdAt ? new Date(movement.createdAt).toLocaleString("fr-FR") : "—"}</td><td className="p-3">{movement.articleTitle || movement.articleId}</td><td className="p-3 text-[#C4A77D]">{movement.type || "—"}</td><td className="p-3">{movement.quantity ?? "—"}</td><td className="p-3 text-stone-500">{movement.reason || "—"}</td></tr>)}</tbody></table></div> : <p className="text-sm text-stone-500">Aucun mouvement enregistré pour le moment.</p>}</section>}
 
         {activeTab === "codes" && <section className={`p-6 border space-y-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
