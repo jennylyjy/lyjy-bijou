@@ -122,3 +122,9 @@ input[type="file"]::file-selector-button {
   padding: 0.6rem 0.85rem;
   cursor: pointer;
 }
+
+@keyframes lyjy-sparkle {
+  0% { opacity: 0; transform: translateY(4px) scale(0.4) rotate(0deg); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-18px) scale(1.2) rotate(35deg); }
+}

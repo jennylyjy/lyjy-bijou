@@ -10,6 +10,7 @@ import GlobalAlert from "@/components/GlobalAlert";
 import PartyLensBanner from "@/components/PartyLensBanner";
 import SiteSidebar from "@/components/SiteSidebar";
 import CookieConsent from "@/components/CookieConsent";
+import CursorSparkles from "@/components/CursorSparkles";
 
 export default function RootLayout({
   children,
@@ -51,6 +52,7 @@ export default function RootLayout({
         }) }} />
         <GlobalAlert />
         <CookieConsent />
+        <CursorSparkles />
         {(pathname === "/" || pathname === "/mon-compte") && <footer className="fixed bottom-0 left-0 right-0 z-20 flex justify-center gap-6 py-2 bg-black/90 text-[10px] uppercase tracking-widest text-stone-400"><Link href="/contact">Contact</Link><Link href="/cgv-cgu">CGV-CGU</Link></footer>}
       </body>
     </html>
