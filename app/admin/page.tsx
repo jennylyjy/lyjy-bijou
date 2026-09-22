@@ -50,6 +50,9 @@ function AdminPage() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [giftCards, setGiftCards] = useState<any[]>([]);
   const [stockMovements, setStockMovements] = useState<any[]>([]);
+  const [stockMovementSearch, setStockMovementSearch] = useState("");
+  const [stockMovementFrom, setStockMovementFrom] = useState("");
+  const [stockMovementTo, setStockMovementTo] = useState("");
   const [returnRequests, setReturnRequests] = useState<any[]>([]);
   const [statsFrom, setStatsFrom] = useState("");
   const [statsTo, setStatsTo] = useState("");
@@ -85,6 +88,7 @@ function AdminPage() {
   const [articleSeoTitle, setArticleSeoTitle] = useState("");
   const [articleSeoDescription, setArticleSeoDescription] = useState("");
   const [articlePrice, setArticlePrice] = useState("");
+  const [articlePurchasePrice, setArticlePurchasePrice] = useState("");
   const [articleReduction, setArticleReduction] = useState("0");
   const [articleQuantity, setArticleQuantity] = useState("");
   const [articleWeight, setArticleWeight] = useState("");
@@ -880,6 +884,7 @@ function AdminPage() {
         seoTitle: articleSeoTitle.trim() || articleTitle.trim(),
         seoDescription: articleSeoDescription.trim() || articleDescription.trim().slice(0, 160),
         price: parsedPrice,
+        purchasePrice: Math.max(0, parseFloat(articlePurchasePrice) || 0),
         reduction: parsedReduction,
         finalPrice: calculatedFinalPrice,
         quantity: totalQuantity,
@@ -1058,6 +1063,7 @@ function AdminPage() {
         seoTitle: editingArticle.seoTitle || editingArticle.title || "",
         seoDescription: editingArticle.seoDescription || editingArticle.description || "",
         price: pPrice,
+        purchasePrice: Math.max(0, parseFloat(editingArticle.purchasePrice) || 0),
         reduction: pRed,
         finalPrice: fPrice,
         quantity: hasVariants ? editedVariants.filter(variant => variant.isAvailable).reduce((total, variant) => total + variant.quantity, 0) : parseInt(editingArticle.quantity) || 0,
@@ -1171,6 +1177,9 @@ function AdminPage() {
     return (!statsFrom || date >= new Date(`${statsFrom}T00:00:00`)) && (!statsTo || date <= new Date(`${statsTo}T23:59:59`));
   });
   const salesRevenue = salesOrders.reduce((sum: number, order: any) => sum + (Number(order.total) || 0), 0);
+  const salesCost = salesOrders.flatMap((order: any) => Array.isArray(order.items) ? order.items : []).reduce((sum: number, item: any) => { const article = articles.find(candidate => candidate.id === item.id || candidate.title === item.name || candidate.title === item.title); return sum + (Number(article?.purchasePrice) || 0) * (Number(item.quantity) || 1); }, 0);
+  const estimatedProfit = salesRevenue - salesCost;
+  const estimatedMargin = salesRevenue > 0 ? (estimatedProfit / salesRevenue) * 100 : 0;
   const averageOrder = salesOrders.length ? salesRevenue / salesOrders.length : 0;
   const bestSellingProducts = salesOrders.flatMap((order: any) => Array.isArray(order.items) ? order.items : []).reduce((totals: Record<string, number>, item: any) => { const key = item.name || item.title || "Article"; totals[key] = (totals[key] || 0) + (Number(item.quantity) || 1); return totals; }, {});
   const topProducts = Object.entries(bestSellingProducts).sort(([, a], [, b]) => b - a).slice(0, 5);
@@ -1182,6 +1191,7 @@ function AdminPage() {
   }, {});
   const revenueChart = Object.entries(revenueByDay).slice(-14);
   const maxDailyRevenue = Math.max(...revenueChart.map(([, value]) => value), 1);
+  const filteredStockMovements = stockMovements.filter((movement: any) => { const query = stockMovementSearch.trim().toLowerCase(); const date = new Date(movement.createdAt || 0); return (!query || `${movement.articleTitle || ""} ${movement.reference || ""}`.toLowerCase().includes(query)) && (!stockMovementFrom || date >= new Date(`${stockMovementFrom}T00:00:00`)) && (!stockMovementTo || date <= new Date(`${stockMovementTo}T23:59:59`)); });
   const filteredArticles = articles.filter((article) => {
     const matchesCategory = articleFilterCategory === "all" || article.category === articleFilterCategory.toLowerCase();
     const search = articleSearchRef.trim().toLowerCase();
@@ -1638,7 +1648,7 @@ function AdminPage() {
 
         {activeTab === "tutorial" && <AdminTutorial />}
 
-        {activeTab === "stockHistory" && <section className={`p-6 border space-y-5 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}><h2 className="font-serif text-2xl text-[#C4A77D]">Historique des mouvements de stock</h2>{stockMovements.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-stone-800 text-xs uppercase text-stone-500"><th className="p-3">Date</th><th className="p-3">Article</th><th className="p-3">Type</th><th className="p-3">Quantité</th><th className="p-3">Motif</th></tr></thead><tbody>{stockMovements.map((movement: any) => <tr key={movement.id} className="border-b border-stone-900"><td className="p-3 text-stone-500">{movement.createdAt ? new Date(movement.createdAt).toLocaleString("fr-FR") : "—"}</td><td className="p-3">{movement.articleTitle || movement.articleId}</td><td className="p-3 text-[#C4A77D]">{movement.type || "—"}</td><td className="p-3">{movement.quantity ?? "—"}</td><td className="p-3 text-stone-500">{movement.reason || "—"}</td></tr>)}</tbody></table></div> : <p className="text-sm text-stone-500">Aucun mouvement enregistré pour le moment.</p>}</section>}
+        {activeTab === "stockHistory" && <section className={`p-6 border space-y-5 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}><h2 className="font-serif text-2xl text-[#C4A77D]">Historique des mouvements de stock</h2><div className="flex flex-wrap gap-2"><input value={stockMovementSearch} onChange={e => setStockMovementSearch(e.target.value)} placeholder="Article ou référence" className="border border-stone-700 bg-black p-2 text-sm" /><input type="date" value={stockMovementFrom} onChange={e => setStockMovementFrom(e.target.value)} className="border border-stone-700 bg-black p-2 text-sm" /><input type="date" value={stockMovementTo} onChange={e => setStockMovementTo(e.target.value)} className="border border-stone-700 bg-black p-2 text-sm" /></div>{filteredStockMovements.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-stone-800 text-xs uppercase text-stone-500"><th className="p-3">Date</th><th className="p-3">Article</th><th className="p-3">Référence</th><th className="p-3">Type</th><th className="p-3">Quantité</th><th className="p-3">Motif</th></tr></thead><tbody>{filteredStockMovements.map((movement: any) => <tr key={movement.id} className="border-b border-stone-900"><td className="p-3 text-stone-500">{movement.createdAt ? new Date(movement.createdAt).toLocaleString("fr-FR") : "—"}</td><td className="p-3">{movement.articleTitle || movement.articleId}</td><td className="p-3 text-stone-500">{movement.reference || "—"}</td><td className="p-3 text-[#C4A77D]">{movement.type || "—"}</td><td className="p-3">{movement.quantity ?? "—"}</td><td className="p-3 text-stone-500">{movement.reason || "—"}</td></tr>)}</tbody></table></div> : <p className="text-sm text-stone-500">Aucun mouvement pour ces filtres.</p>}</section>}
 
         {activeTab === "returns" && <section className={`p-6 border space-y-5 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}><h2 className="font-serif text-2xl text-[#C4A77D]">Retours et remboursements</h2>{returnRequests.length ? <div className="space-y-3">{returnRequests.map((request: any) => <div key={request.id} className="flex flex-col gap-3 border border-stone-800 p-4 md:flex-row md:items-center md:justify-between"><div><p className="text-[#C4A77D]">Commande {request.orderId}</p><p className="text-sm">{request.clientName} · {Number(request.total || 0).toFixed(2)} €</p><p className="text-xs text-stone-500">{request.reason} · {request.createdAt ? new Date(request.createdAt).toLocaleString("fr-FR") : ""}</p></div><div className="flex flex-wrap gap-2"><span className="border border-stone-700 px-2 py-2 text-xs uppercase">{request.status}</span><button type="button" onClick={() => updateReturnStatus(request, "accepted")} className="border border-[#C4A77D] px-2 py-2 text-xs uppercase">Accepter</button><button type="button" onClick={() => updateReturnStatus(request, "refunded")} className="border border-green-600/60 px-2 py-2 text-xs uppercase text-green-400">Remboursé</button><button type="button" onClick={() => updateReturnStatus(request, "refused")} className="border border-red-500/60 px-2 py-2 text-xs uppercase text-red-400">Refuser</button></div></div>)}</div> : <p className="text-sm text-stone-500">Aucune demande de retour.</p>}</section>}
 
@@ -1687,7 +1697,7 @@ function AdminPage() {
             <h2 className="font-serif text-xl tracking-[0.2em] text-[#C4A77D] flex items-center gap-2">
               <Package className="w-5 h-5" /> Suivi et Gestion des Commandes
             </h2>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3"><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Chiffre d’affaires</p><p className="mt-2 text-2xl text-[#C4A77D]">{salesRevenue.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Panier moyen</p><p className="mt-2 text-2xl text-[#C4A77D]">{averageOrder.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Commandes comptabilisées</p><p className="mt-2 text-2xl text-[#C4A77D]">{salesOrders.length}</p></div></div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-5"><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Chiffre d’affaires</p><p className="mt-2 text-2xl text-[#C4A77D]">{salesRevenue.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Coût d’achat</p><p className="mt-2 text-2xl text-stone-300">{salesCost.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Bénéfice estimé</p><p className="mt-2 text-2xl text-green-400">{estimatedProfit.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Marge</p><p className="mt-2 text-2xl text-[#C4A77D]">{estimatedMargin.toFixed(1)} %</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Panier moyen</p><p className="mt-2 text-2xl text-[#C4A77D]">{averageOrder.toFixed(2)} €</p></div></div>
             <div className="flex flex-wrap items-end gap-3 border border-stone-800 p-4"><label className="text-xs uppercase text-stone-500">Du<input type="date" value={statsFrom} onChange={(e) => setStatsFrom(e.target.value)} className="mt-1 block border border-stone-700 bg-black p-2 text-sm" /></label><label className="text-xs uppercase text-stone-500">Au<input type="date" value={statsTo} onChange={(e) => setStatsTo(e.target.value)} className="mt-1 block border border-stone-700 bg-black p-2 text-sm" /></label><button type="button" onClick={() => { setStatsFrom(""); setStatsTo(""); }} className="border border-stone-700 px-3 py-2 text-xs uppercase">Toute la période</button></div>
             <div className="border border-stone-800 p-4"><h3 className="mb-3 text-xs uppercase tracking-widest text-[#C4A77D]">Meilleures ventes</h3>{topProducts.length ? <div className="grid gap-2 md:grid-cols-2">{topProducts.map(([name, quantity]) => <div key={name} className="flex justify-between border-b border-stone-900 pb-2 text-sm"><span>{name}</span><strong className="text-[#C4A77D]">{quantity}</strong></div>)}</div> : <p className="text-sm text-stone-500">Aucune vente enregistrée.</p>}</div>
             <div className="border border-stone-800 p-4"><h3 className="mb-4 text-xs uppercase tracking-widest text-[#C4A77D]">Chiffre d’affaires par jour</h3>{revenueChart.length ? <div className="flex h-44 items-end gap-2 overflow-x-auto">{revenueChart.map(([day, value]) => <div key={day} className="flex min-w-12 flex-1 flex-col items-center justify-end gap-2"><span className="text-[10px] text-stone-400">{value.toFixed(0)} €</span><div className="w-full rounded-t bg-[#C4A77D] transition-all" style={{ height: `${Math.max(8, (value / maxDailyRevenue) * 115)}px` }} title={`${day} : ${value.toFixed(2)} €`} /><span className="text-[10px] text-stone-500">{day}</span></div>)}</div> : <p className="text-sm text-stone-500">Aucune vente enregistrée sur cette période.</p>}</div>
@@ -1847,6 +1857,8 @@ function AdminPage() {
                       placeholder="120"
                       className={`w-full p-3 border text-sm ${isDayMode ? "bg-white border-stone-300 text-stone-900" : "bg-black border-stone-800 text-stone-100"}`}
                     />
+                    <label className="block uppercase text-stone-500 mb-1">Prix d’achat (€)</label>
+                    <input type="number" step="0.01" min="0" value={articlePurchasePrice} onChange={(e) => setArticlePurchasePrice(e.target.value)} className={`w-full p-3 border ${isDayMode ? "bg-white border-stone-300" : "bg-black border-stone-800"}`} placeholder="Pour calculer la marge" />
                   </div>
                   <div>
                     <label className="block uppercase text-stone-500 mb-1">Réduction (%)</label>
@@ -3050,6 +3062,8 @@ function AdminPage() {
                       onChange={(e) => setEditingArticle({ ...editingArticle, price: e.target.value })}
                       className={`w-full p-3 border ${isDayMode ? "bg-stone-50 border-stone-300" : "bg-black border-stone-800"}`}
                     />
+                    <label className="block uppercase text-stone-500 mb-1">Prix d’achat (€)</label>
+                    <input type="number" step="0.01" min="0" value={editingArticle.purchasePrice || ""} onChange={(e) => setEditingArticle({ ...editingArticle, purchasePrice: e.target.value })} className={`w-full p-3 border ${isDayMode ? "bg-white border-stone-300" : "bg-black border-stone-800"}`} placeholder="Pour calculer la marge" />
                   </div>
                   <div>
                     <label className="block uppercase text-stone-500 mb-1">Réduction (%)</label>
