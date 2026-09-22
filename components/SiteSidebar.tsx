@@ -60,7 +60,7 @@ export default function SiteSidebar() {
         <div className="space-y-1 px-3"><button type="button" onClick={() => setFilter(key, "all")} className="block w-full py-1 text-left text-xs text-stone-300 hover:text-[#C4A77D]">Tous</button>{taxonomy[key].filter(item => item.isVisible).map(item => <button type="button" key={item.id} onClick={() => setFilter(key, item.id)} className={`block w-full py-1 text-left text-xs hover:text-[#C4A77D] ${searchParams.get(key) === item.id ? "text-[#C4A77D]" : "text-stone-400"}`}>{item.label}</button>)}</div>
       </div>)}
     </div>
-    <div className="space-y-3 border-t border-stone-800 pt-5 text-xs uppercase tracking-widest"><Link href="/contact" className="block hover:text-[#C4A77D]">Contact</Link><Link href="/cgv-cgu" className="block hover:text-[#C4A77D]">CGV-CGU</Link></div>
+    <div className="space-y-3 border-t border-stone-800 pt-5 text-xs uppercase tracking-widest"><Link href="/contact" className="block hover:text-[#C4A77D]">Contact</Link><Link href="/faq" className="block hover:text-[#C4A77D]">FAQ</Link><Link href="/cgv-cgu" className="block hover:text-[#C4A77D]">CGV-CGU</Link></div>
     </aside>
   </>;
 }
