@@ -9,6 +9,7 @@ import Link from "next/link";
 import GlobalAlert from "@/components/GlobalAlert";
 import PartyLensBanner from "@/components/PartyLensBanner";
 import SiteSidebar from "@/components/SiteSidebar";
+import CookieConsent from "@/components/CookieConsent";
 
 export default function RootLayout({
   children,
@@ -49,6 +50,7 @@ export default function RootLayout({
           "@context": "https://schema.org", "@type": "Store", name: "LYJY Atelier Bijoux", url: "https://www.lyjy.fr/", logo: "https://www.lyjy.fr/logo.png", image: "https://www.lyjy.fr/lyjy-banner-email.jpg", description: "Bijoux artisanaux et créations uniques faits main par LYJY Atelier.", email: "contact-lyjy@lyjy.fr", address: { "@type": "PostalAddress", addressCountry: "FR" }
         }) }} />
         <GlobalAlert />
+        <CookieConsent />
         {(pathname === "/" || pathname === "/mon-compte") && <footer className="fixed bottom-0 left-0 right-0 z-20 flex justify-center gap-6 py-2 bg-black/90 text-[10px] uppercase tracking-widest text-stone-400"><Link href="/contact">Contact</Link><Link href="/cgv-cgu">CGV-CGU</Link></footer>}
       </body>
     </html>

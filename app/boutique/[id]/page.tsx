@@ -7,7 +7,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { useThemeStore } from "@/store/useThemeStore";
 import { useCartStore } from "@/store/useCartStore";
 import { db } from "@/lib/firebase";
-import { addDoc, collection, doc, getDoc, onSnapshot, query, where, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, onSnapshot, query, where, serverTimestamp, getDocs } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 // 1. Import du composant configurateur
 import CalendarConfigurator from "@/components/CalendarConfigurator";
@@ -27,6 +27,10 @@ export default function ArticleDetailPage() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
+  const [reviewPhoto, setReviewPhoto] = useState("");
+  const [verifiedBuyer, setVerifiedBuyer] = useState(false);
+  const [relatedArticles, setRelatedArticles] = useState<any[]>([]);
+  const [zoomOpen, setZoomOpen] = useState(false);
 
   useEffect(() => {
     async function fetchArticle() {
@@ -40,6 +44,8 @@ export default function ArticleDetailPage() {
           setActiveImage(data.imageUrl || data.imageUrls?.[0] || "/logo.png");
           // Aucune variante n'est sélectionnée par défaut : le client voit d'abord la galerie générale.
           setSelectedVariant(null);
+          const viewed = JSON.parse(localStorage.getItem("lyjy_recent_articles") || "[]").filter((item: any) => item.id !== docSnap.id);
+          localStorage.setItem("lyjy_recent_articles", JSON.stringify([{ id: docSnap.id, title: data.title, imageUrl: data.imageUrl || data.imageUrls?.[0] || "/logo.png", price: data.finalPrice ?? data.price }, ...viewed].slice(0, 8)));
         }
       } catch (err) {
         console.error("Erreur chargement article :", err);
@@ -68,7 +74,8 @@ export default function ArticleDetailPage() {
   }, [article]);
 
   useEffect(() => { if (!id) return onSnapshot(query(collection(db, "reviews"), where("articleId", "==", String(id))), snap => setReviews(snap.docs.map(item => ({ id: item.id, ...item.data() })))); }, [id]);
-  const submitReview = async () => { if (!auth.currentUser || !reviewText.trim() || !id) return; await addDoc(collection(db, "reviews"), { articleId: String(id), userId: auth.currentUser.uid, userName: auth.currentUser.email?.split("@")[0] || "Client", rating: reviewRating, text: reviewText.trim(), createdAt: serverTimestamp() }); setReviewText(""); };
+  useEffect(() => { if (!auth.currentUser || !id) return; getDocs(query(collection(db, "orders"), where("clientEmail", "==", auth.currentUser.email || ""))).then(snap => setVerifiedBuyer(snap.docs.some(item => (item.data().items || []).some((product: any) => product.id === id)))).catch(() => undefined); }, [id]);
+  const submitReview = async () => { if (!auth.currentUser || !reviewText.trim() || !id) return; await addDoc(collection(db, "reviews"), { articleId: String(id), userId: auth.currentUser.uid, userName: auth.currentUser.email?.split("@")[0] || "Client", rating: reviewRating, text: reviewText.trim(), photoUrl: reviewPhoto || null, verifiedPurchase: verifiedBuyer, createdAt: serverTimestamp() }); setReviewText(""); setReviewPhoto(""); };
 
   useEffect(() => {
     return onSnapshot(collection(db, "articles"), (snapshot) => {
@@ -80,6 +87,7 @@ export default function ArticleDetailPage() {
         .filter(Boolean);
 
       setAvailableCategories(Array.from(new Set(categories)));
+      if (article) setRelatedArticles(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as any).filter((item: any) => item.id !== article.id && item.category === article.category && item.isAvailable !== false && Number(item.quantity) > 0).slice(0, 4));
     });
   }, []);
 
@@ -174,7 +182,7 @@ export default function ArticleDetailPage() {
         {/* Galerie Photos */}
         <div className="space-y-4">
           <div className="aspect-square border border-stone-800 bg-stone-900 overflow-hidden">
-            <img src={activeImage} alt={article.title} loading="eager" decoding="async" className="w-full h-full object-cover" />
+            <button type="button" onClick={() => setZoomOpen(true)} className="w-full h-full cursor-zoom-in"><img src={activeImage} alt={article.title} loading="eager" decoding="async" className="w-full h-full object-cover" /></button>
           </div>
           {galleryImages.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
@@ -269,7 +277,9 @@ export default function ArticleDetailPage() {
           )}
         </div>
       </div>
-      <section className="max-w-5xl mx-auto w-full mt-12 border-t border-stone-800 pt-8 space-y-5"><h2 className="font-serif text-xl text-[#C4A77D]">Avis clients ({reviews.length})</h2>{auth.currentUser && <div className="space-y-2"><div className="flex gap-2">{[1,2,3,4,5].map(value => <button type="button" key={value} onClick={() => setReviewRating(value)} className={value <= reviewRating ? "text-[#C4A77D] text-xl" : "text-stone-600 text-xl"}>★</button>)}</div><textarea value={reviewText} onChange={e => setReviewText(e.target.value)} placeholder="Votre avis après votre achat" className="w-full p-3 bg-black border border-stone-700" /><button type="button" onClick={submitReview} className="px-4 py-2 bg-[#C4A77D] text-black uppercase text-xs">Publier</button></div>}{reviews.map(review => <article key={review.id} className="border-b border-stone-800 pb-3"><div className="text-[#C4A77D]">{"★".repeat(review.rating || 0)}</div><p className="text-stone-300">{review.text}</p><small className="text-stone-500">{review.userName}</small></article>)}</section>
+      <section className="max-w-5xl mx-auto w-full mt-12 border-t border-stone-800 pt-8 space-y-5"><h2 className="font-serif text-xl text-[#C4A77D]">Avis clients ({reviews.length})</h2>{auth.currentUser && <div className="space-y-2"><div className="flex gap-2">{[1,2,3,4,5].map(value => <button type="button" key={value} onClick={() => setReviewRating(value)} className={value <= reviewRating ? "text-[#C4A77D] text-xl" : "text-stone-600 text-xl"}>★</button>)}</div>{verifiedBuyer && <p className="text-xs text-green-400">✓ Achat vérifié</p>}<textarea value={reviewText} onChange={e => setReviewText(e.target.value)} placeholder="Votre avis après votre achat" className="w-full p-3 bg-black border border-stone-700" /><input type="file" accept="image/*" onChange={e => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setReviewPhoto(String(reader.result)); reader.readAsDataURL(file); }} className="text-xs" /><button type="button" onClick={submitReview} className="px-4 py-2 bg-[#C4A77D] text-black uppercase text-xs">Publier</button></div>}{reviews.map(review => <article key={review.id} className="border-b border-stone-800 pb-3"><div className="text-[#C4A77D]">{"★".repeat(review.rating || 0)}</div><p className="text-stone-300">{review.text}</p>{review.photoUrl && <img src={review.photoUrl} alt="Photo client" className="mt-2 h-24 w-24 object-cover" />}{review.verifiedPurchase && <small className="mr-2 text-green-400">✓ Achat vérifié</small>}<small className="text-stone-500">{review.userName}</small></article>)}</section>
+      {relatedArticles.length > 0 && <section className="max-w-5xl mx-auto w-full mt-12 border-t border-stone-800 pt-8"><h2 className="font-serif text-xl text-[#C4A77D]">Vous aimerez aussi</h2><div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">{relatedArticles.map(item => <Link key={item.id} href={`/boutique/${item.id}`} className="border border-stone-800 p-2"><img src={item.imageUrl || "/logo.png"} alt={item.title} loading="lazy" className="aspect-square w-full object-cover" /><p className="mt-2 text-xs text-[#C4A77D]">{item.title}</p></Link>)}</div></section>}
+      {zoomOpen && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-6" onClick={() => setZoomOpen(false)}><img src={activeImage} alt={article.title} className="max-h-[90vh] max-w-[90vw] object-contain" /></div>}
     </main>
   );
 }
