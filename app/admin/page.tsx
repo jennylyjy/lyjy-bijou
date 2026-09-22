@@ -1133,6 +1133,11 @@ function AdminPage() {
   }
 
   const filteredOrders = onlineOrders.filter((o) => o.status === orderSubTab);
+  const salesOrders = onlineOrders.filter((order: any) => order.status !== "cancelled" && order.status !== "cancel");
+  const salesRevenue = salesOrders.reduce((sum: number, order: any) => sum + (Number(order.total) || 0), 0);
+  const averageOrder = salesOrders.length ? salesRevenue / salesOrders.length : 0;
+  const bestSellingProducts = salesOrders.flatMap((order: any) => Array.isArray(order.items) ? order.items : []).reduce((totals: Record<string, number>, item: any) => { const key = item.name || item.title || "Article"; totals[key] = (totals[key] || 0) + (Number(item.quantity) || 1); return totals; }, {});
+  const topProducts = Object.entries(bestSellingProducts).sort(([, a], [, b]) => b - a).slice(0, 5);
   const filteredArticles = articles.filter((article) => {
     const matchesCategory = articleFilterCategory === "all" || article.category === articleFilterCategory.toLowerCase();
     const search = articleSearchRef.trim().toLowerCase();
@@ -1607,6 +1612,8 @@ function AdminPage() {
             <h2 className="font-serif text-xl tracking-[0.2em] text-[#C4A77D] flex items-center gap-2">
               <Package className="w-5 h-5" /> Suivi et Gestion des Commandes
             </h2>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3"><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Chiffre d’affaires</p><p className="mt-2 text-2xl text-[#C4A77D]">{salesRevenue.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Panier moyen</p><p className="mt-2 text-2xl text-[#C4A77D]">{averageOrder.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Commandes comptabilisées</p><p className="mt-2 text-2xl text-[#C4A77D]">{salesOrders.length}</p></div></div>
+            <div className="border border-stone-800 p-4"><h3 className="mb-3 text-xs uppercase tracking-widest text-[#C4A77D]">Meilleures ventes</h3>{topProducts.length ? <div className="grid gap-2 md:grid-cols-2">{topProducts.map(([name, quantity]) => <div key={name} className="flex justify-between border-b border-stone-900 pb-2 text-sm"><span>{name}</span><strong className="text-[#C4A77D]">{quantity}</strong></div>)}</div> : <p className="text-sm text-stone-500">Aucune vente enregistrée.</p>}</div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs tracking-widest uppercase">
               {[
                 { id: "preparing", label: "À préparer", icon: Clock },
