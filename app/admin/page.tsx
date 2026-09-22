@@ -1166,6 +1166,14 @@ function AdminPage() {
   const averageOrder = salesOrders.length ? salesRevenue / salesOrders.length : 0;
   const bestSellingProducts = salesOrders.flatMap((order: any) => Array.isArray(order.items) ? order.items : []).reduce((totals: Record<string, number>, item: any) => { const key = item.name || item.title || "Article"; totals[key] = (totals[key] || 0) + (Number(item.quantity) || 1); return totals; }, {});
   const topProducts = Object.entries(bestSellingProducts).sort(([, a], [, b]) => b - a).slice(0, 5);
+  const revenueByDay = salesOrders.reduce((totals: Record<string, number>, order: any) => {
+    const date = new Date(order.createdAt || order.date || 0);
+    const key = Number.isNaN(date.getTime()) ? "Date inconnue" : date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+    totals[key] = (totals[key] || 0) + (Number(order.total) || 0);
+    return totals;
+  }, {});
+  const revenueChart = Object.entries(revenueByDay).slice(-14);
+  const maxDailyRevenue = Math.max(...revenueChart.map(([, value]) => value), 1);
   const filteredArticles = articles.filter((article) => {
     const matchesCategory = articleFilterCategory === "all" || article.category === articleFilterCategory.toLowerCase();
     const search = articleSearchRef.trim().toLowerCase();
@@ -1674,6 +1682,7 @@ function AdminPage() {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3"><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Chiffre d’affaires</p><p className="mt-2 text-2xl text-[#C4A77D]">{salesRevenue.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Panier moyen</p><p className="mt-2 text-2xl text-[#C4A77D]">{averageOrder.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Commandes comptabilisées</p><p className="mt-2 text-2xl text-[#C4A77D]">{salesOrders.length}</p></div></div>
             <div className="flex flex-wrap items-end gap-3 border border-stone-800 p-4"><label className="text-xs uppercase text-stone-500">Du<input type="date" value={statsFrom} onChange={(e) => setStatsFrom(e.target.value)} className="mt-1 block border border-stone-700 bg-black p-2 text-sm" /></label><label className="text-xs uppercase text-stone-500">Au<input type="date" value={statsTo} onChange={(e) => setStatsTo(e.target.value)} className="mt-1 block border border-stone-700 bg-black p-2 text-sm" /></label><button type="button" onClick={() => { setStatsFrom(""); setStatsTo(""); }} className="border border-stone-700 px-3 py-2 text-xs uppercase">Toute la période</button></div>
             <div className="border border-stone-800 p-4"><h3 className="mb-3 text-xs uppercase tracking-widest text-[#C4A77D]">Meilleures ventes</h3>{topProducts.length ? <div className="grid gap-2 md:grid-cols-2">{topProducts.map(([name, quantity]) => <div key={name} className="flex justify-between border-b border-stone-900 pb-2 text-sm"><span>{name}</span><strong className="text-[#C4A77D]">{quantity}</strong></div>)}</div> : <p className="text-sm text-stone-500">Aucune vente enregistrée.</p>}</div>
+            <div className="border border-stone-800 p-4"><h3 className="mb-4 text-xs uppercase tracking-widest text-[#C4A77D]">Chiffre d’affaires par jour</h3>{revenueChart.length ? <div className="flex h-44 items-end gap-2 overflow-x-auto">{revenueChart.map(([day, value]) => <div key={day} className="flex min-w-12 flex-1 flex-col items-center justify-end gap-2"><span className="text-[10px] text-stone-400">{value.toFixed(0)} €</span><div className="w-full rounded-t bg-[#C4A77D] transition-all" style={{ height: `${Math.max(8, (value / maxDailyRevenue) * 115)}px` }} title={`${day} : ${value.toFixed(2)} €`} /><span className="text-[10px] text-stone-500">{day}</span></div>)}</div> : <p className="text-sm text-stone-500">Aucune vente enregistrée sur cette période.</p>}</div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs tracking-widest uppercase">
               {[
                 { id: "preparing", label: "À préparer", icon: Clock },

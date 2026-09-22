@@ -50,6 +50,23 @@ export default function ArticleDetailPage() {
     fetchArticle();
   }, [id]);
 
+  useEffect(() => {
+    if (!article) return;
+    const title = String(article.seoTitle || article.title || "LYJY Atelier");
+    const description = String(article.seoDescription || article.description || "Création artisanale LYJY Atelier Bijoux.").slice(0, 160);
+    document.title = `${title} | LYJY Atelier`;
+    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "description";
+      document.head.appendChild(meta);
+    }
+    meta.content = description;
+    return () => {
+      document.title = "LYJY Atelier Bijoux";
+    };
+  }, [article]);
+
   useEffect(() => { if (!id) return onSnapshot(query(collection(db, "reviews"), where("articleId", "==", String(id))), snap => setReviews(snap.docs.map(item => ({ id: item.id, ...item.data() })))); }, [id]);
   const submitReview = async () => { if (!auth.currentUser || !reviewText.trim() || !id) return; await addDoc(collection(db, "reviews"), { articleId: String(id), userId: auth.currentUser.uid, userName: auth.currentUser.email?.split("@")[0] || "Client", rating: reviewRating, text: reviewText.trim(), createdAt: serverTimestamp() }); setReviewText(""); };
 
@@ -157,7 +174,7 @@ export default function ArticleDetailPage() {
         {/* Galerie Photos */}
         <div className="space-y-4">
           <div className="aspect-square border border-stone-800 bg-stone-900 overflow-hidden">
-            <img src={activeImage} alt={article.title} className="w-full h-full object-cover" />
+            <img src={activeImage} alt={article.title} loading="eager" decoding="async" className="w-full h-full object-cover" />
           </div>
           {galleryImages.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
@@ -171,7 +188,7 @@ export default function ArticleDetailPage() {
                   }}
                   className={`w-16 h-16 border flex-shrink-0 overflow-hidden transition-all ${!selectedVariant && activeImage === img ? "border-[#C4A77D] opacity-100" : "border-stone-800 opacity-60 hover:opacity-100"}`}
                 >
-                  <img src={img} alt="miniature" className="w-full h-full object-cover" />
+                    <img src={img} alt="miniature" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
