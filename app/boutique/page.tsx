@@ -177,11 +177,6 @@ export default function BoutiquePage() {
             <select value={sort} onChange={(e) => setSort(e.target.value)} className="border border-stone-800 bg-black p-2 text-sm"><option value="newest">Nouveautés</option><option value="priceAsc">Prix croissant</option><option value="priceDesc">Prix décroissant</option><option value="name">Nom A-Z</option></select>
             <Link href="/favoris" className="flex items-center justify-center gap-2 border border-[#C4A77D] px-3 py-2 text-xs uppercase"><Heart className="h-4 w-4" /> Favoris ({favorites.length})</Link>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs"><SlidersHorizontal className="h-4 w-4 text-[#C4A77D]" />
-            <select value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className="border border-stone-800 bg-black p-2"><option value="all">Toutes les tailles</option>{availableSizes.map(size => <option key={size} value={size}>{size}</option>)}</select>
-            <select value={selectedMaterial} onChange={(e) => setSelectedMaterial(e.target.value)} className="border border-stone-800 bg-black p-2"><option value="all">Toutes les matières</option>{availableMaterials.map(material => <option key={material} value={material}>{material}</option>)}</select>
-            <select value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)} className="border border-stone-800 bg-black p-2"><option value="all">Toutes les couleurs</option>{catalogTaxonomy.colors.filter(item => item.isVisible).map(color => <option key={color.id} value={color.id}>{color.label}</option>)}</select>
-          </div>
         </div>
         {filteredProducts.length === 0 ? (
           <p className="text-center text-xs tracking-widest text-stone-500 uppercase py-12">
