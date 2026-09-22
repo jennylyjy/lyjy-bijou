@@ -108,3 +108,17 @@ a[href]:focus-visible {
     object-fit: cover;
   }
 }
+input[type="file"] {
+  color: #c4a77d;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  border: 1px solid #c4a77d;
+  background: #c4a77d;
+  color: #000;
+  padding: 0.6rem 0.85rem;
+  cursor: pointer;
+}
