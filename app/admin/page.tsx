@@ -51,6 +51,8 @@ function AdminPage() {
   const [giftCards, setGiftCards] = useState<any[]>([]);
   const [stockMovements, setStockMovements] = useState<any[]>([]);
   const [returnRequests, setReturnRequests] = useState<any[]>([]);
+  const [statsFrom, setStatsFrom] = useState("");
+  const [statsTo, setStatsTo] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
@@ -1144,7 +1146,11 @@ function AdminPage() {
   }
 
   const filteredOrders = onlineOrders.filter((o) => o.status === orderSubTab);
-  const salesOrders = onlineOrders.filter((order: any) => order.status !== "cancelled" && order.status !== "cancel");
+  const salesOrders = onlineOrders.filter((order: any) => {
+    if (order.status === "cancelled" || order.status === "cancel") return false;
+    const date = new Date(order.createdAt || order.date || 0);
+    return (!statsFrom || date >= new Date(`${statsFrom}T00:00:00`)) && (!statsTo || date <= new Date(`${statsTo}T23:59:59`));
+  });
   const salesRevenue = salesOrders.reduce((sum: number, order: any) => sum + (Number(order.total) || 0), 0);
   const averageOrder = salesOrders.length ? salesRevenue / salesOrders.length : 0;
   const bestSellingProducts = salesOrders.flatMap((order: any) => Array.isArray(order.items) ? order.items : []).reduce((totals: Record<string, number>, item: any) => { const key = item.name || item.title || "Article"; totals[key] = (totals[key] || 0) + (Number(item.quantity) || 1); return totals; }, {});
@@ -1211,6 +1217,14 @@ function AdminPage() {
     downloadFile("references-et-stocks.csv", `\ufeff${csv}`, "text/csv;charset=utf-8");
   };
   const exportBackupJson = () => downloadFile("sauvegarde-lyjy.json", JSON.stringify({ exportedAt: new Date().toISOString(), articles, users, orders: onlineOrders, coupons, giftCards }, null, 2), "application/json");
+  const exportCustomersCsv = () => {
+    const csv = ["Prénom;Nom;Email;Téléphone;Adresse;Points fidélité", ...users.map((user: any) => [user.firstName, user.lastName, user.email, user.phone, [user.addressDetails?.street, user.addressDetails?.postalCode, user.addressDetails?.city].filter(Boolean).join(", "), user.loyaltyPoints || 0].map((value: any) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(";"))].join("\n");
+    downloadFile("clients-lyjy.csv", `\ufeff${csv}`, "text/csv;charset=utf-8");
+  };
+  const exportSalesCsv = () => {
+    const csv = ["Commande;Date;Client;Email;Total;Statut", ...onlineOrders.map((order: any) => [order.id, order.date || order.createdAt, order.clientName, order.clientEmail, order.total, order.status].map((value: any) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(";"))].join("\n");
+    downloadFile("ventes-lyjy.csv", `\ufeff${csv}`, "text/csv;charset=utf-8");
+  };
   const countedCash = cashDenominations.reduce((sum, [value]) => sum + Number(value) * (cashDialogCounts[value] || 0), 0);
   const keypad = (value: string) => setCashDialogCode(current => `${current}${value}`.slice(0, 12));
   const saveCashSession = async (session: any) => {
@@ -1596,7 +1610,7 @@ function AdminPage() {
         {activeTab === "codes" && <section className={`p-6 border space-y-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div><h2 className="font-serif text-2xl text-[#C4A77D]">Codes-barres et QR codes</h2><p className="text-xs text-stone-500 mt-1">Télécharge les codes de chaque article et de chaque variante.</p></div>
-            <div className="flex flex-wrap gap-2"><button type="button" onClick={downloadReferencesPdf} className="border border-[#C4A77D] px-4 py-3 text-xs uppercase tracking-widest">PDF références + quantités</button><button type="button" onClick={exportReferencesCsv} className="border border-stone-700 px-4 py-3 text-xs uppercase tracking-widest">Export CSV</button><button type="button" onClick={exportBackupJson} className="border border-stone-700 px-4 py-3 text-xs uppercase tracking-widest">Sauvegarde JSON</button></div>
+            <div className="flex flex-wrap gap-2"><button type="button" onClick={downloadReferencesPdf} className="border border-[#C4A77D] px-4 py-3 text-xs uppercase tracking-widest">PDF références + quantités</button><button type="button" onClick={exportReferencesCsv} className="border border-stone-700 px-4 py-3 text-xs uppercase tracking-widest">Export CSV</button><button type="button" onClick={exportCustomersCsv} className="border border-stone-700 px-4 py-3 text-xs uppercase tracking-widest">Export clients</button><button type="button" onClick={exportSalesCsv} className="border border-stone-700 px-4 py-3 text-xs uppercase tracking-widest">Export ventes</button><button type="button" onClick={exportBackupJson} className="border border-stone-700 px-4 py-3 text-xs uppercase tracking-widest">Sauvegarde JSON</button></div>
             <input value={codeSearch} onChange={(e) => setCodeSearch(e.target.value)} placeholder="Rechercher une référence..." className="border border-stone-800 bg-black p-3 text-sm" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1639,6 +1653,7 @@ function AdminPage() {
               <Package className="w-5 h-5" /> Suivi et Gestion des Commandes
             </h2>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3"><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Chiffre d’affaires</p><p className="mt-2 text-2xl text-[#C4A77D]">{salesRevenue.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Panier moyen</p><p className="mt-2 text-2xl text-[#C4A77D]">{averageOrder.toFixed(2)} €</p></div><div className="border border-stone-800 p-4"><p className="text-[10px] uppercase tracking-widest text-stone-500">Commandes comptabilisées</p><p className="mt-2 text-2xl text-[#C4A77D]">{salesOrders.length}</p></div></div>
+            <div className="flex flex-wrap items-end gap-3 border border-stone-800 p-4"><label className="text-xs uppercase text-stone-500">Du<input type="date" value={statsFrom} onChange={(e) => setStatsFrom(e.target.value)} className="mt-1 block border border-stone-700 bg-black p-2 text-sm" /></label><label className="text-xs uppercase text-stone-500">Au<input type="date" value={statsTo} onChange={(e) => setStatsTo(e.target.value)} className="mt-1 block border border-stone-700 bg-black p-2 text-sm" /></label><button type="button" onClick={() => { setStatsFrom(""); setStatsTo(""); }} className="border border-stone-700 px-3 py-2 text-xs uppercase">Toute la période</button></div>
             <div className="border border-stone-800 p-4"><h3 className="mb-3 text-xs uppercase tracking-widest text-[#C4A77D]">Meilleures ventes</h3>{topProducts.length ? <div className="grid gap-2 md:grid-cols-2">{topProducts.map(([name, quantity]) => <div key={name} className="flex justify-between border-b border-stone-900 pb-2 text-sm"><span>{name}</span><strong className="text-[#C4A77D]">{quantity}</strong></div>)}</div> : <p className="text-sm text-stone-500">Aucune vente enregistrée.</p>}</div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs tracking-widest uppercase">
               {[
