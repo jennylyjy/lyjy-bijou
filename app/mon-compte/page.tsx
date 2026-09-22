@@ -220,6 +220,8 @@ export default function AccountPage() {
         return "En cours d'expédition";
       case "sent":
         return "Expédiée";
+      case "delivered":
+        return "Livrée";
       case "cancelled":
         return "Annulée";
       default:

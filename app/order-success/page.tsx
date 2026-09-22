@@ -31,6 +31,29 @@ export default function OrderSuccessPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const sessionId = new URLSearchParams(window.location.search).get("session_id");
+    if (!sessionId || sessionStorage.getItem(`lyjy_stock_logged_${sessionId}`)) return;
+    const storedUser = JSON.parse(localStorage.getItem("lyjy_current_user") || "null");
+    const cartKey = storedUser?.email ? `lyjy_cart_${storedUser.email}` : "lyjy_cart_guest";
+    const rawCart = localStorage.getItem(cartKey);
+    if (!rawCart) return;
+    try {
+      const items = JSON.parse(rawCart);
+      if (!Array.isArray(items) || items.length === 0) return;
+      Promise.all(items.filter((item: any) => !item.options?.giftCard).map((item: any) => addDoc(collection(db, "stockMovements"), {
+        articleId: item.id || "",
+        articleTitle: item.name || "Article",
+        type: "sale",
+        quantity: -Math.abs(Number(item.quantity) || 0),
+        reason: "Vente internet",
+        reference: item.options?.ref || item.ref || "",
+        orderSessionId: sessionId,
+        createdAt: new Date().toISOString(),
+      }))).then(() => sessionStorage.setItem(`lyjy_stock_logged_${sessionId}`, "1")).catch(() => undefined);
+    } catch { /* panier invalide : la commande reste visible sans mouvement dupliqué */ }
+  }, []);
+
   return (
     <main className={`min-h-screen flex flex-col font-sans px-6 py-12 md:px-16 items-center justify-center transition-colors duration-500 ${
       isDayMode ? "bg-[#F9F8F6] text-stone-900" : "bg-black text-stone-200"
