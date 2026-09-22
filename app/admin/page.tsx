@@ -1177,6 +1177,15 @@ function AdminPage() {
     if (!reportWindow) return alert("Autorisez les fenêtres pop-up pour générer le PDF.");
     reportWindow.document.write(report); reportWindow.document.close();
   };
+  const downloadFile = (filename: string, content: string, type = "text/plain") => {
+    const url = URL.createObjectURL(new Blob([content], { type }));
+    const link = document.createElement("a"); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url);
+  };
+  const exportReferencesCsv = () => {
+    const csv = ["Référence;Article;Type;Quantité", ...codeItems.map((item: any) => [item.ref, item.title, item.label, item.quantity].map((value: any) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(";"))].join("\n");
+    downloadFile("references-et-stocks.csv", `\ufeff${csv}`, "text/csv;charset=utf-8");
+  };
+  const exportBackupJson = () => downloadFile("sauvegarde-lyjy.json", JSON.stringify({ exportedAt: new Date().toISOString(), articles, users, orders: onlineOrders, coupons, giftCards }, null, 2), "application/json");
   const countedCash = cashDenominations.reduce((sum, [value]) => sum + Number(value) * (cashDialogCounts[value] || 0), 0);
   const keypad = (value: string) => setCashDialogCode(current => `${current}${value}`.slice(0, 12));
   const saveCashSession = async (session: any) => {
@@ -1556,7 +1565,7 @@ function AdminPage() {
         {activeTab === "codes" && <section className={`p-6 border space-y-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div><h2 className="font-serif text-2xl text-[#C4A77D]">Codes-barres et QR codes</h2><p className="text-xs text-stone-500 mt-1">Télécharge les codes de chaque article et de chaque variante.</p></div>
-            <button type="button" onClick={downloadReferencesPdf} className="border border-[#C4A77D] px-4 py-3 text-xs uppercase tracking-widest">PDF références + quantités</button>
+            <div className="flex flex-wrap gap-2"><button type="button" onClick={downloadReferencesPdf} className="border border-[#C4A77D] px-4 py-3 text-xs uppercase tracking-widest">PDF références + quantités</button><button type="button" onClick={exportReferencesCsv} className="border border-stone-700 px-4 py-3 text-xs uppercase tracking-widest">Export CSV</button><button type="button" onClick={exportBackupJson} className="border border-stone-700 px-4 py-3 text-xs uppercase tracking-widest">Sauvegarde JSON</button></div>
             <input value={codeSearch} onChange={(e) => setCodeSearch(e.target.value)} placeholder="Rechercher une référence..." className="border border-stone-800 bg-black p-3 text-sm" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
