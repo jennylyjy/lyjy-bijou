@@ -3007,8 +3007,13 @@ function AdminPage() {
                     <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_120px_1.3fr_100px_auto] gap-2 items-center">
                       <input value={variant.label || ""} onChange={(e) => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.map((item: any, i: number) => i === index ? { ...item, label: e.target.value } : item) })} placeholder="Nom / lettre" className={`p-3 border text-sm ${isDayMode ? "bg-white border-stone-300" : "bg-stone-950 border-stone-800"}`} />
                       <input value={variant.size || ""} onChange={(e) => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.map((item: any, i: number) => i === index ? { ...item, size: e.target.value } : item) })} placeholder="Taille" className={`p-3 border text-sm ${isDayMode ? "bg-white border-stone-300" : "bg-stone-950 border-stone-800"}`} />
-                      <div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <img src={variant.imageUrl || "/logo.png"} alt={`Photo ${variant.label || "variante"}`} className="h-12 w-12 object-cover border border-stone-700" />
+                          <span className="text-[10px] text-stone-500">Photo actuelle</span>
+                        </div>
                         <input type="file" accept="image/*" onChange={(e) => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.map((item: any, i: number) => i === index ? { ...item, file: e.target.files?.[0] || null } : item) })} className="w-full text-xs text-stone-500 file:mr-3 file:py-2 file:px-3 file:border-0 file:text-xs file:bg-[#C4A77D] file:text-black" />
+                        <span className="block text-[10px] text-stone-500">Choisir une photo pour la remplacer</span>
                         {variant.file?.name && <span className="text-[10px] text-[#C4A77D]">Nouvelle photo : {variant.file.name}</span>}
                       </div>
                       <input type="number" min="0" value={variant.quantity ?? 0} onChange={(e) => setEditingArticle({ ...editingArticle, variants: editingArticle.variants.map((item: any, i: number) => i === index ? { ...item, quantity: e.target.value } : item) })} placeholder="Stock" className={`p-3 border text-sm ${isDayMode ? "bg-white border-stone-300" : "bg-stone-950 border-stone-800"}`} />
