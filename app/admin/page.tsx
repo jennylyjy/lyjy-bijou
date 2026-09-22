@@ -673,7 +673,7 @@ function AdminPage() {
 
       if (newStatus === "sent" && trackingInfo) {
         const order = orders.find(o => o.docId === docId);
-        if (order?.clientEmail) {
+        if (order?.clientEmail && !order.shippingEmailSentAt) {
           fetch("/api/send-email", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -682,7 +682,15 @@ function AdminPage() {
               email: order.clientEmail,
               orderDetails: { id: order.id, ...trackingInfo }
             })
-          }).catch(console.error);
+          }).then(() => updateDoc(orderRef, { shippingEmailSentAt: new Date().toISOString() })).catch(console.error);
+        }
+      }
+
+      if (newStatus === "delivered") {
+        const order = orders.find(o => o.docId === docId);
+        if (order?.clientEmail && !order.deliveryEmailSentAt) {
+          fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "DELIVERY_NOTIF", email: order.clientEmail, orderDetails: { id: order.id } }) })
+            .then(() => updateDoc(orderRef, { deliveryEmailSentAt: new Date().toISOString() })).catch(console.error);
         }
       }
 
@@ -1689,6 +1697,7 @@ function AdminPage() {
                 { id: "ready", label: "Prêtes", icon: CheckCircle2 },
                 { id: "shipping", label: "À expédier", icon: Send },
                 { id: "sent", label: "Expédiées", icon: Package },
+                { id: "delivered", label: "Livrées", icon: CheckCircle2 },
                 { id: "cancelled", label: "Annulées", icon: X },
               ].map((sub) => {
                 const IconComponent = sub.icon;
@@ -1740,11 +1749,12 @@ function AdminPage() {
                           </button>
                           <button onClick={() => createReturnRequest(order)} className="px-2 py-1 border border-stone-600 text-stone-300 text-[10px] uppercase hover:border-[#C4A77D]" title="Créer un retour">Retour</button>
                           <button onClick={() => handleDeleteOrder(order)} className="px-2 py-1 border border-red-700 text-red-500 hover:bg-red-600 hover:text-white" title="Supprimer la commande"><Trash2 className="w-3 h-3" /></button>
-                          {orderSubTab !== "cancelled" && orderSubTab !== "sent" && (
+                          {orderSubTab !== "cancelled" && orderSubTab !== "sent" && orderSubTab !== "delivered" && (
                              <button onClick={() => handleCancelAndRefundOrder(order)} className="px-2 py-1 border border-red-500 text-red-500 text-[10px] uppercase hover:bg-red-500 hover:text-white">
                                Annuler & Rembourser
                              </button>
                           )}
+                          {orderSubTab === "sent" && <button onClick={() => handleUpdateOrderStatus(order.docId, "delivered")} className="px-3 py-1 border border-green-500/50 text-green-400 text-[10px] uppercase">Marquer livrée</button>}
                           {orderSubTab === "preparing" && (
                             <button onClick={() => handleUpdateOrderStatus(order.docId, "ready")} className="px-3 py-1 bg-[#C4A77D] text-black text-[10px] uppercase hover:bg-[#b3956c]">Prêt →</button>
                           )}

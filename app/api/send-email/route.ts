@@ -76,6 +76,12 @@ interface ShippingNotificationRequest {
   orderDetails: OrderDetails;
 }
 
+interface DeliveryNotificationRequest {
+  type: "DELIVERY_NOTIF";
+  email: string;
+  orderDetails: OrderDetails;
+}
+
 interface GiftCardDeliveryRequest {
   type: "GIFT_CARD_DELIVERY";
   email: string;
@@ -85,6 +91,7 @@ interface GiftCardDeliveryRequest {
 type EmailRequest =
   | OrderConfirmationRequest
   | ShippingNotificationRequest
+  | DeliveryNotificationRequest
   | GiftCardDeliveryRequest;
 
 const escapeHtml = (
@@ -171,6 +178,8 @@ const isEmailRequest = (
       === "ORDER_CONFIRMATION"
     || value.type
       === "SHIPPING_NOTIF"
+    || value.type
+      === "DELIVERY_NOTIF"
   ) {
     return isOrderDetails(
       value.orderDetails,
@@ -901,6 +910,16 @@ const POST = async (
           result.error.message,
         );
       }
+    }
+
+    if (body.type === "DELIVERY_NOTIF") {
+      const result = await resend.emails.send({
+        from: fromEmail,
+        to: [body.email],
+        subject: `Votre commande ${body.orderDetails.id} a été livrée !`,
+        html: `<div style="max-width:600px;margin:auto;padding:40px;font-family:Arial,sans-serif;color:#222"><h1 style="color:#C4A77D;font-family:Georgia,serif">Votre commande est livrée</h1><p>Bonjour,</p><p>Votre commande <strong>${escapeHtml(body.orderDetails.id)}</strong> a été livrée. Nous espérons que votre création LYJY vous donnera entière satisfaction.</p><p style="color:#777">Merci pour votre confiance.<br/>LYJY Atelier Bijoux</p></div>`,
+      });
+      if (result.error) throw new Error(result.error.message);
     }
 
     /*
