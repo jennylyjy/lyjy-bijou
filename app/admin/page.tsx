@@ -50,6 +50,7 @@ function AdminPage() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [giftCards, setGiftCards] = useState<any[]>([]);
   const [stockMovements, setStockMovements] = useState<any[]>([]);
+  const [returnRequests, setReturnRequests] = useState<any[]>([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
@@ -252,6 +253,9 @@ function AdminPage() {
     const unsubStockMovements = onSnapshot(query(collection(db, "stockMovements"), orderBy("createdAt", "desc")), (snapshot) => {
       setStockMovements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).slice(0, 200));
     }, () => setStockMovements([]));
+    const unsubReturns = onSnapshot(query(collection(db, "returnRequests"), orderBy("createdAt", "desc")), (snapshot) => {
+      setReturnRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, () => setReturnRequests([]));
 
     const unsubVirtualAdvents = onSnapshot(collection(db, "virtualAdventCalendars"), (snapshot) => {
       setVirtualAdventCalendars(snapshot.docs.map(calendarDoc => ({ id: calendarDoc.id, ...calendarDoc.data() })));
@@ -296,6 +300,7 @@ function AdminPage() {
       unsubCoupons();
       unsubGiftCards();
       unsubStockMovements();
+      unsubReturns();
       unsubVirtualAdvents();
       unsubCashClosures();
       unsubCatalogTaxonomy();
@@ -1181,6 +1186,15 @@ function AdminPage() {
     const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
     const link = document.createElement("a"); link.href = url; link.download = `code-barres-${item.ref}.svg`; link.click(); URL.revokeObjectURL(url);
   };
+  const createReturnRequest = async (order: any) => {
+    const reason = window.prompt("Motif du retour / remboursement :");
+    if (!reason?.trim()) return;
+    await addDoc(collection(db, "returnRequests"), { orderId: order.id, orderDocId: order.docId, clientName: order.clientName || order.clientEmail || "Client", clientEmail: order.clientEmail || "", total: Number(order.total) || 0, reason: reason.trim(), status: "requested", createdAt: new Date().toISOString() });
+    setSuccessMessage("Demande de retour enregistrée."); setTimeout(() => setSuccessMessage(""), 3000);
+  };
+  const updateReturnStatus = async (request: any, status: string) => {
+    await updateDoc(doc(db, "returnRequests", request.id), { status, updatedAt: new Date().toISOString() });
+  };
   const downloadReferencesPdf = () => {
     const rows = codeItems.map((item: any) => `<tr><td>${item.ref}</td><td>${item.title}</td><td>${item.label}</td><td>${item.quantity}</td></tr>`).join("");
     const report = `<html><head><title>Références et stocks LYJY</title><style>body{font-family:Arial;padding:30px;color:#222}h1{color:#9a773f}p{color:#666}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #bbb;padding:9px;text-align:left}th{background:#eee}</style></head><body><h1>LYJY Atelier — Références et stocks</h1><p>Généré le ${new Date().toLocaleString("fr-FR")}</p><table><thead><tr><th>Référence</th><th>Article</th><th>Type / variante</th><th>Quantité</th></tr></thead><tbody>${rows || `<tr><td colspan="4">Aucune référence</td></tr>`}</tbody></table><script>window.onload=()=>window.print()</script></body></html>`;
@@ -1561,6 +1575,7 @@ function AdminPage() {
             Codes / QR ({codeItems.length})
           </button>
           <button onClick={() => setActiveTab("stockHistory")} className={`pb-2 transition-colors ${activeTab === "stockHistory" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Historique stock</button>
+          <button onClick={() => setActiveTab("returns")} className={`pb-2 transition-colors ${activeTab === "returns" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Retours ({returnRequests.length})</button>
           <button onClick={() => setActiveTab("cashier")} className={`pb-2 transition-colors ${activeTab === "cashier" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Caisse</button>
         </div>
 
@@ -1575,6 +1590,8 @@ function AdminPage() {
         {activeTab === "tutorial" && <AdminTutorial />}
 
         {activeTab === "stockHistory" && <section className={`p-6 border space-y-5 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}><h2 className="font-serif text-2xl text-[#C4A77D]">Historique des mouvements de stock</h2>{stockMovements.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-stone-800 text-xs uppercase text-stone-500"><th className="p-3">Date</th><th className="p-3">Article</th><th className="p-3">Type</th><th className="p-3">Quantité</th><th className="p-3">Motif</th></tr></thead><tbody>{stockMovements.map((movement: any) => <tr key={movement.id} className="border-b border-stone-900"><td className="p-3 text-stone-500">{movement.createdAt ? new Date(movement.createdAt).toLocaleString("fr-FR") : "—"}</td><td className="p-3">{movement.articleTitle || movement.articleId}</td><td className="p-3 text-[#C4A77D]">{movement.type || "—"}</td><td className="p-3">{movement.quantity ?? "—"}</td><td className="p-3 text-stone-500">{movement.reason || "—"}</td></tr>)}</tbody></table></div> : <p className="text-sm text-stone-500">Aucun mouvement enregistré pour le moment.</p>}</section>}
+
+        {activeTab === "returns" && <section className={`p-6 border space-y-5 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}><h2 className="font-serif text-2xl text-[#C4A77D]">Retours et remboursements</h2>{returnRequests.length ? <div className="space-y-3">{returnRequests.map((request: any) => <div key={request.id} className="flex flex-col gap-3 border border-stone-800 p-4 md:flex-row md:items-center md:justify-between"><div><p className="text-[#C4A77D]">Commande {request.orderId}</p><p className="text-sm">{request.clientName} · {Number(request.total || 0).toFixed(2)} €</p><p className="text-xs text-stone-500">{request.reason} · {request.createdAt ? new Date(request.createdAt).toLocaleString("fr-FR") : ""}</p></div><div className="flex flex-wrap gap-2"><span className="border border-stone-700 px-2 py-2 text-xs uppercase">{request.status}</span><button type="button" onClick={() => updateReturnStatus(request, "accepted")} className="border border-[#C4A77D] px-2 py-2 text-xs uppercase">Accepter</button><button type="button" onClick={() => updateReturnStatus(request, "refunded")} className="border border-green-600/60 px-2 py-2 text-xs uppercase text-green-400">Remboursé</button><button type="button" onClick={() => updateReturnStatus(request, "refused")} className="border border-red-500/60 px-2 py-2 text-xs uppercase text-red-400">Refuser</button></div></div>)}</div> : <p className="text-sm text-stone-500">Aucune demande de retour.</p>}</section>}
 
         {activeTab === "codes" && <section className={`p-6 border space-y-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -1678,6 +1695,7 @@ function AdminPage() {
                           <button onClick={() => handleGenerateInvoice(order)} className="px-2 py-1 border border-[#C4A77D] text-[#C4A77D] text-[10px] uppercase hover:bg-[#C4A77D] hover:text-black inline-flex items-center gap-1" title="Bon de commande">
                             <FileText className="w-3 h-3" /> Bon
                           </button>
+                          <button onClick={() => createReturnRequest(order)} className="px-2 py-1 border border-stone-600 text-stone-300 text-[10px] uppercase hover:border-[#C4A77D]" title="Créer un retour">Retour</button>
                           <button onClick={() => handleDeleteOrder(order)} className="px-2 py-1 border border-red-700 text-red-500 hover:bg-red-600 hover:text-white" title="Supprimer la commande"><Trash2 className="w-3 h-3" /></button>
                           {orderSubTab !== "cancelled" && orderSubTab !== "sent" && (
                              <button onClick={() => handleCancelAndRefundOrder(order)} className="px-2 py-1 border border-red-500 text-red-500 text-[10px] uppercase hover:bg-red-500 hover:text-white">
