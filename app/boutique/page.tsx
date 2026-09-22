@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Sun, Moon, ShoppingBag, Check } from "lucide-react";
+import { Sun, Moon, ShoppingBag, Check, Heart, Search, SlidersHorizontal } from "lucide-react";
 import { useThemeStore } from "@/store/useThemeStore";
 import { useCartStore } from "@/store/useCartStore";
 import { db } from "@/lib/firebase";
@@ -23,6 +23,11 @@ export default function BoutiquePage() {
   const [selectedSubcategory, setSelectedSubcategory] = useState("all");
   const [selectedTheme, setSelectedTheme] = useState("all");
   const [selectedColor, setSelectedColor] = useState("all");
+  const [selectedSize, setSelectedSize] = useState("all");
+  const [selectedMaterial, setSelectedMaterial] = useState("all");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [catalogTaxonomy, setCatalogTaxonomy] = useState<CatalogTaxonomy>(defaultCatalogTaxonomy);
   const [notification, setNotification] = useState("");
 
@@ -32,6 +37,7 @@ export default function BoutiquePage() {
     setSelectedSubcategory(params.get("subcategories") || "all");
     setSelectedTheme(params.get("themes") || "all");
     setSelectedColor(params.get("colors") || "all");
+    try { setFavorites(JSON.parse(localStorage.getItem("lyjy-favorites") || "[]")); } catch { setFavorites([]); }
   }, []);
 
   // Récupération dynamique depuis Firestore
@@ -46,6 +52,9 @@ export default function BoutiquePage() {
           subcategory: data.subcategory || "",
           theme: data.theme || "",
           color: data.color || "",
+          size: data.size || "",
+          material: data.material || data.matiere || "",
+          createdAt: data.createdAt || 0,
           price: data.finalPrice || data.price || 0,
           originalPrice: data.price || 0,
           reduction: data.reduction || 0,
@@ -77,12 +86,18 @@ export default function BoutiquePage() {
     };
   }, []);
 
+  const availableSizes = Array.from(new Set(products.map(product => product.size).filter(Boolean)));
+  const availableMaterials = Array.from(new Set(products.map(product => product.material).filter(Boolean)));
   const filteredProducts = products.filter(product =>
     (selectedCategory === "all" || product.category === selectedCategory) &&
     (selectedSubcategory === "all" || product.subcategory === selectedSubcategory) &&
     (selectedTheme === "all" || product.theme === selectedTheme) &&
-    (selectedColor === "all" || product.color === selectedColor)
-  );
+    (selectedColor === "all" || product.color === selectedColor) &&
+    (selectedSize === "all" || product.size === selectedSize) &&
+    (selectedMaterial === "all" || product.material === selectedMaterial) &&
+    (!search.trim() || `${product.name} ${product.category} ${product.color} ${product.material}`.toLowerCase().includes(search.toLowerCase().trim()))
+  ).sort((a, b) => sort === "priceAsc" ? a.price - b.price : sort === "priceDesc" ? b.price - a.price : sort === "name" ? a.name.localeCompare(b.name) : Number(b.createdAt || 0) - Number(a.createdAt || 0));
+  const toggleFavorite = (id: string) => setFavorites(current => { const next = current.includes(id) ? current.filter(item => item !== id) : [...current, id]; localStorage.setItem("lyjy-favorites", JSON.stringify(next)); return next; });
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -156,6 +171,18 @@ export default function BoutiquePage() {
             <img src="/logo.png" alt="LYJY" className="block h-14 w-14 shrink-0 object-contain drop-shadow-[0_0_14px_rgba(196,167,125,0.8)] animate-heartbeat sm:h-24 sm:w-auto md:h-36" />
           </div>
         </div>
+        <div className="border border-stone-800 p-3 md:p-4 space-y-3">
+          <div className="flex flex-col md:flex-row gap-2">
+            <label className="flex flex-1 items-center gap-2 border border-stone-800 px-3"><Search className="h-4 w-4 text-stone-500" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher un article..." className="w-full bg-transparent p-2 text-sm outline-none" /></label>
+            <select value={sort} onChange={(e) => setSort(e.target.value)} className="border border-stone-800 bg-black p-2 text-sm"><option value="newest">Nouveautés</option><option value="priceAsc">Prix croissant</option><option value="priceDesc">Prix décroissant</option><option value="name">Nom A-Z</option></select>
+            <Link href="/favoris" className="flex items-center justify-center gap-2 border border-[#C4A77D] px-3 py-2 text-xs uppercase"><Heart className="h-4 w-4" /> Favoris ({favorites.length})</Link>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs"><SlidersHorizontal className="h-4 w-4 text-[#C4A77D]" />
+            <select value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className="border border-stone-800 bg-black p-2"><option value="all">Toutes les tailles</option>{availableSizes.map(size => <option key={size} value={size}>{size}</option>)}</select>
+            <select value={selectedMaterial} onChange={(e) => setSelectedMaterial(e.target.value)} className="border border-stone-800 bg-black p-2"><option value="all">Toutes les matières</option>{availableMaterials.map(material => <option key={material} value={material}>{material}</option>)}</select>
+            <select value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)} className="border border-stone-800 bg-black p-2"><option value="all">Toutes les couleurs</option>{catalogTaxonomy.colors.filter(item => item.isVisible).map(color => <option key={color.id} value={color.id}>{color.label}</option>)}</select>
+          </div>
+        </div>
         {filteredProducts.length === 0 ? (
           <p className="text-center text-xs tracking-widest text-stone-500 uppercase py-12">
             Aucun article disponible pour le moment.
@@ -179,6 +206,7 @@ export default function BoutiquePage() {
                       height={180}
                       className="object-cover h-full w-full group-hover:scale-105 transition-transform duration-500"
                     />
+                    <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(product.id); }} className="absolute left-2 top-2 rounded-full bg-black/70 p-2 text-white" aria-label="Ajouter aux favoris"><Heart className={`h-4 w-4 ${favorites.includes(product.id) ? "fill-red-500 text-red-500" : ""}`} /></button>
                     {product.imageUrls && product.imageUrls.length > 1 && (
                       <span className="absolute top-2 right-2 bg-black/70 text-[#C4A77D] text-[10px] px-2 py-0.5 uppercase tracking-widest border border-[#C4A77D]/30">
                         +{product.imageUrls.length - 1} photos
