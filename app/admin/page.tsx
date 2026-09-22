@@ -53,6 +53,7 @@ function AdminPage() {
   const [returnRequests, setReturnRequests] = useState<any[]>([]);
   const [statsFrom, setStatsFrom] = useState("");
   const [statsTo, setStatsTo] = useState("");
+  const [lowStockThreshold, setLowStockThreshold] = useState(2);
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
@@ -258,6 +259,9 @@ function AdminPage() {
     const unsubReturns = onSnapshot(query(collection(db, "returnRequests"), orderBy("createdAt", "desc")), (snapshot) => {
       setReturnRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, () => setReturnRequests([]));
+    const unsubInventorySettings = onSnapshot(doc(db, "settings", "inventory"), snapshot => {
+      if (snapshot.exists()) setLowStockThreshold(Math.max(0, Number(snapshot.data().lowStockThreshold) || 0));
+    });
 
     const unsubVirtualAdvents = onSnapshot(collection(db, "virtualAdventCalendars"), (snapshot) => {
       setVirtualAdventCalendars(snapshot.docs.map(calendarDoc => ({ id: calendarDoc.id, ...calendarDoc.data() })));
@@ -303,6 +307,7 @@ function AdminPage() {
       unsubGiftCards();
       unsubStockMovements();
       unsubReturns();
+      unsubInventorySettings();
       unsubVirtualAdvents();
       unsubCashClosures();
       unsubCatalogTaxonomy();
@@ -346,7 +351,7 @@ function AdminPage() {
   };
   const lowStockArticles = articles.filter(article => {
     const stock = getArticleStock(article);
-    return article.isAvailable !== false && !article.isCustomGiftCard && stock > 0 && stock <= 2;
+    return article.isAvailable !== false && !article.isCustomGiftCard && stock > 0 && stock <= lowStockThreshold;
   });
   const adventArticles = articles.filter(a => a.isAdvent || a.category === "calendrier-avent");
   const adventCategoryAvailability = catalogTaxonomy.categories
@@ -1192,6 +1197,12 @@ function AdminPage() {
     const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
     const link = document.createElement("a"); link.href = url; link.download = `code-barres-${item.ref}.svg`; link.click(); URL.revokeObjectURL(url);
   };
+  const printLabel = (item: any) => {
+    const price = articles.find((article: any) => article.title === item.title)?.finalPrice ?? articles.find((article: any) => article.title === item.title)?.price ?? 0;
+    const printWindow = window.open("", "_blank", "width=420,height=300");
+    if (!printWindow) return alert("Autorisez les fenêtres pop-up pour imprimer l’étiquette.");
+    printWindow.document.write(`<html><body style="font-family:Arial;text-align:center;padding:12px"><strong>${item.title}</strong><br><span style="font-size:22px">${Number(price).toFixed(2)} €</span><br>${barcodeSvg(item.ref)}<script>window.onload=()=>window.print()</script></body></html>`); printWindow.document.close();
+  };
   const createReturnRequest = async (order: any) => {
     const reason = window.prompt("Motif du retour / remboursement :");
     if (!reason?.trim()) return;
@@ -1546,6 +1557,7 @@ function AdminPage() {
         >
           Remettre les statistiques à zéro
         </button>
+        <div className="flex flex-wrap items-end gap-3 border border-stone-800 p-4"><label className="text-xs uppercase tracking-widest text-stone-500">Seuil d’alerte stock<input type="number" min="0" value={lowStockThreshold} onChange={(e) => setLowStockThreshold(Math.max(0, Number(e.target.value) || 0))} className="mt-1 block w-28 border border-stone-700 bg-black p-2 text-sm text-stone-100" /></label><button type="button" onClick={() => setDoc(doc(db, "settings", "inventory"), { lowStockThreshold, updatedAt: new Date().toISOString() })} className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Enregistrer le seuil</button></div>
 
         {/* NAVIGATION DES ONGLETS */}
         <div className="flex gap-4 border-b border-stone-800 pb-4 text-xs tracking-[0.2em] uppercase flex-wrap">
@@ -1619,7 +1631,7 @@ function AdminPage() {
               return <div key={item.id} className="border border-stone-800 p-4 flex flex-col gap-3">
                 <div className="flex items-center gap-3"><img src={item.imageUrl || "/logo.png"} alt="" className="h-12 w-12 object-cover border border-stone-700" /><div><p className="text-[#C4A77D]">{item.title}</p><p className="text-xs text-stone-500">{item.label} · Réf. {item.ref}</p></div></div>
                 <div className="flex items-center justify-center gap-6 bg-white p-3"><div><svg xmlns="http://www.w3.org/2000/svg" width="190" height="100" viewBox="0 0 190 100"><rect width="190" height="100" fill="white"/><g fill="black">{item.ref.split("").map((digit: string, index: number) => <rect key={index} x={10 + index * 12} y="8" width="6" height="70" />)}</g><text x="95" y="93" textAnchor="middle" fontSize="13" fill="black">{item.ref}</text></svg></div><img src={qrUrl} alt={`QR ${item.ref}`} className="h-24 w-24" /></div>
-                <div className="flex flex-wrap gap-2"><button type="button" onClick={() => downloadBarcode(item)} className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Télécharger code-barres</button><a href={qrUrl} download={`qr-${item.ref}.png`} target="_blank" rel="noreferrer" className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Télécharger QR code</a></div>
+                <div className="flex flex-wrap gap-2"><button type="button" onClick={() => downloadBarcode(item)} className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Télécharger code-barres</button><button type="button" onClick={() => printLabel(item)} className="border border-stone-700 px-3 py-2 text-xs uppercase">Imprimer étiquette</button><a href={qrUrl} download={`qr-${item.ref}.png`} target="_blank" rel="noreferrer" className="border border-[#C4A77D] px-3 py-2 text-xs uppercase">Télécharger QR code</a></div>
               </div>;
             })}
           </div>
