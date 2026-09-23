@@ -2051,7 +2051,7 @@ function AdminPage() {
                                   {variants.map((variant: any, index: number) => (
                                     <div key={`${variant.ref || variant.label || "variant"}-${index}`} className="flex items-center justify-between gap-3 border border-stone-800 px-3 py-2 text-xs">
                                       <span className="text-stone-300">{variant.label || "Variante"}{variant.size ? ` · Taille : ${variant.size}` : ""}</span>
-                                      <span className="font-mono text-[#C4A77D] whitespace-nowrap">{formatCatalogRef(variant.ref || `${art.ref}${String(index + 1).padStart(2, "0")}`)}</span>
+                                      <span className="flex items-center gap-3 whitespace-nowrap"><span className="text-stone-400">Qté : <strong className={Number(variant.quantity) > 0 ? "text-green-400" : "text-red-400"}>{Number(variant.quantity) || 0}</strong></span><span className="font-mono text-[#C4A77D]">{formatCatalogRef(variant.ref || `${art.ref}${String(index + 1).padStart(2, "0")}`)}</span></span>
                                     </div>
                                   ))}
                                 </div>
