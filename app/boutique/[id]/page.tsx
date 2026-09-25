@@ -210,7 +210,7 @@ export default function ArticleDetailPage() {
                 </button>
                 {variants.map((variant: any) => (
                   <button type="button" key={`${variant.label}-${variant.imageUrl}`} onClick={() => { if (selectedVariant?.label === variant.label) { setSelectedVariant(null); setActiveImage(imagesList[0] || "/logo.png"); } else { setSelectedVariant(variant); setActiveImage(variant.imageUrl); } }} title={variant.label} className={`min-w-10 h-10 px-3 rounded-full border text-xs uppercase transition-all ${selectedVariant?.label === variant.label ? "border-[#C4A77D] ring-2 ring-[#C4A77D]/30 text-[#C4A77D]" : "border-stone-700 text-stone-300 hover:border-[#C4A77D]"}`}>
-                    {variant.label}
+                    {variant.label}{variant.ref && <span className="ml-1 block text-[9px] normal-case text-stone-500">Réf. {variant.ref}</span>}
                   </button>
                 ))}
               </div>

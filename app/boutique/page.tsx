@@ -62,6 +62,7 @@ export default function BoutiquePage() {
           giftCardConfig: data.giftCardConfig || null,
           image: data.imageUrl || "/logo.png",
           imageUrls: data.imageUrls || [data.imageUrl || "/logo.png"],
+          ref: data.ref || "",
           isAvailable: data.isAvailable !== false,
         };
       });
@@ -211,6 +212,7 @@ export default function BoutiquePage() {
 
                   <div className="space-y-1 mb-3 md:mb-6">
                     <h3 className="font-serif text-[10px] leading-tight sm:text-xs md:text-sm tracking-wider text-[#C4A77D]">{product.name}</h3>
+                    <p className="text-[9px] font-mono text-stone-500 sm:text-[10px]">Réf. : {product.ref || "—"}</p>
                     <div className="flex items-center gap-2">
                       <p className="text-[10px] sm:text-xs md:text-sm font-light">
                         {product.isCustomGiftCard
