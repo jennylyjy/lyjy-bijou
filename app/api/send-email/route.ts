@@ -82,6 +82,8 @@ interface DeliveryNotificationRequest {
   orderDetails: OrderDetails;
 }
 
+interface AdminMessageRequest { type: "ADMIN_MESSAGE"; email: string; subject: string; message: string; }
+
 interface GiftCardDeliveryRequest {
   type: "GIFT_CARD_DELIVERY";
   email: string;
@@ -92,6 +94,7 @@ type EmailRequest =
   | OrderConfirmationRequest
   | ShippingNotificationRequest
   | DeliveryNotificationRequest
+  | AdminMessageRequest
   | GiftCardDeliveryRequest;
 
 const escapeHtml = (
@@ -172,6 +175,8 @@ const isEmailRequest = (
   ) {
     return false;
   }
+
+  if (value.type === "ADMIN_MESSAGE") return typeof value.subject === "string" && typeof value.message === "string";
 
   if (
     value.type
@@ -919,6 +924,11 @@ const POST = async (
         subject: `Votre commande ${body.orderDetails.id} a été livrée !`,
         html: `<div style="max-width:600px;margin:auto;padding:40px;font-family:Arial,sans-serif;color:#222"><h1 style="color:#C4A77D;font-family:Georgia,serif">Votre commande est livrée</h1><p>Bonjour,</p><p>Votre commande <strong>${escapeHtml(body.orderDetails.id)}</strong> a été livrée. Nous espérons que votre création LYJY vous donnera entière satisfaction.</p><p style="color:#777">Merci pour votre confiance.<br/>LYJY Atelier Bijoux</p></div>`,
       });
+      if (result.error) throw new Error(result.error.message);
+    }
+
+    if (body.type === "ADMIN_MESSAGE") {
+      const result = await resend.emails.send({ from: fromEmail, to: [body.email], subject: body.subject, html: `<div style="margin:auto;max-width:700px;background:#111;color:#eee;font-family:Arial;padding:40px"><div style="border-bottom:2px solid #C4A77D;padding-bottom:25px;text-align:center"><img src="https://www.lyjy.fr/logo.png" alt="LYJY" style="width:120px;background:#000" /><h1 style="color:#C4A77D;font-family:Georgia,serif;letter-spacing:3px">LYJY ATELIER BIJOUX</h1></div><div style="padding:30px 0;white-space:pre-wrap;line-height:1.8">${escapeHtml(body.message)}</div><hr style="border-color:#C4A77D"/><p style="color:#999;text-align:center">© 2026 LYJY Atelier · contact-lyjy@lyjy.fr</p></div>` });
       if (result.error) throw new Error(result.error.message);
     }
 

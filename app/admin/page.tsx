@@ -60,6 +60,13 @@ function AdminPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
+  const [contactRecipients, setContactRecipients] = useState<string[]>(["contact-lyjy@lyjy.fr"]);
+  const [contactRecipientInput, setContactRecipientInput] = useState("");
+  const [contactTo, setContactTo] = useState("contact-lyjy@lyjy.fr");
+  const [contactSubject, setContactSubject] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [contactStatus, setContactStatus] = useState("");
+  const [contactMessages, setContactMessages] = useState<any[]>([]);
 
   // MODALE D'EXPÉDITION
   const [shippingOrder, setShippingOrder] = useState<any | null>(null);
@@ -268,6 +275,14 @@ function AdminPage() {
     const unsubInventorySettings = onSnapshot(doc(db, "settings", "inventory"), snapshot => {
       if (snapshot.exists()) setLowStockThreshold(Math.max(0, Number(snapshot.data().lowStockThreshold) || 0));
     });
+    const unsubContactSettings = onSnapshot(doc(db, "settings", "contact"), snapshot => {
+      if (!snapshot.exists()) return;
+      const recipients = Array.isArray(snapshot.data().recipients) ? snapshot.data().recipients.filter((value: unknown): value is string => typeof value === "string") : [];
+      if (recipients.length) { setContactRecipients(recipients); setContactTo(recipients[0]); }
+    });
+    const unsubContactMessages = onSnapshot(query(collection(db, "contactMessages"), orderBy("createdAt", "desc")), snapshot => {
+      setContactMessages(snapshot.docs.map(messageDoc => ({ id: messageDoc.id, ...messageDoc.data() })));
+    }, () => setContactMessages([]));
 
     const unsubVirtualAdvents = onSnapshot(collection(db, "virtualAdventCalendars"), (snapshot) => {
       setVirtualAdventCalendars(snapshot.docs.map(calendarDoc => ({ id: calendarDoc.id, ...calendarDoc.data() })));
@@ -314,6 +329,8 @@ function AdminPage() {
       unsubStockMovements();
       unsubReturns();
       unsubInventorySettings();
+      unsubContactSettings();
+      unsubContactMessages();
       unsubVirtualAdvents();
       unsubCashClosures();
       unsubCatalogTaxonomy();
@@ -1229,6 +1246,10 @@ function AdminPage() {
     const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
     const link = document.createElement("a"); link.href = url; link.download = `code-barres-${item.ref}.svg`; link.click(); URL.revokeObjectURL(url);
   };
+
+  const saveContactRecipients = async (next: string[]) => { const clean = Array.from(new Set(next.map(value => value.trim().toLowerCase()).filter(value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)))); setContactRecipients(clean); if (clean[0]) setContactTo(clean[0]); await setDoc(doc(db, "settings", "contact"), { recipients: clean, updatedAt: new Date().toISOString() }); };
+  const sendAdminContactEmail = async () => { if (!contactTo || !contactSubject.trim() || !contactMessage.trim()) return; setContactStatus("Envoi en cours…"); const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "ADMIN_MESSAGE", email: contactTo, subject: contactSubject.trim(), message: contactMessage.trim() }) }); setContactStatus(response.ok ? "E-mail envoyé avec le modèle LYJY." : "Échec de l’envoi. Vérifiez la configuration e-mail."); if (response.ok) { setContactSubject(""); setContactMessage(""); } };
+  const markContactMessageRead = async (message: any) => { await updateDoc(doc(db, "contactMessages", message.id), { status: "read", readAt: new Date().toISOString() }); };
   const printLabel = (item: any) => {
     const price = articles.find((article: any) => article.title === item.title)?.finalPrice ?? articles.find((article: any) => article.title === item.title)?.price ?? 0;
     const printWindow = window.open("", "_blank", "width=420,height=300");
@@ -1642,6 +1663,7 @@ function AdminPage() {
           <button onClick={() => setActiveTab("stockHistory")} className={`pb-2 transition-colors ${activeTab === "stockHistory" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Historique stock</button>
           <button onClick={() => setActiveTab("returns")} className={`pb-2 transition-colors ${activeTab === "returns" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Retours ({returnRequests.length})</button>
           <button onClick={() => setActiveTab("cashier")} className={`pb-2 transition-colors ${activeTab === "cashier" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Caisse</button>
+          <button onClick={() => setActiveTab("contact")} className={`pb-2 transition-colors ${activeTab === "contact" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Contact ({contactMessages.filter(message => message.status === "unread").length})</button>
         </div>
 
         {successMessage && (
@@ -1657,6 +1679,15 @@ function AdminPage() {
         {activeTab === "stockHistory" && <section className={`p-6 border space-y-5 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}><h2 className="font-serif text-2xl text-[#C4A77D]">Historique des mouvements de stock</h2><div className="flex flex-wrap gap-2"><input value={stockMovementSearch} onChange={e => setStockMovementSearch(e.target.value)} placeholder="Article ou référence" className="border border-stone-700 bg-black p-2 text-sm" /><input type="date" value={stockMovementFrom} onChange={e => setStockMovementFrom(e.target.value)} className="border border-stone-700 bg-black p-2 text-sm" /><input type="date" value={stockMovementTo} onChange={e => setStockMovementTo(e.target.value)} className="border border-stone-700 bg-black p-2 text-sm" /></div>{filteredStockMovements.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-stone-800 text-xs uppercase text-stone-500"><th className="p-3">Date</th><th className="p-3">Article</th><th className="p-3">Référence</th><th className="p-3">Type</th><th className="p-3">Quantité</th><th className="p-3">Motif</th></tr></thead><tbody>{filteredStockMovements.map((movement: any) => <tr key={movement.id} className="border-b border-stone-900"><td className="p-3 text-stone-500">{movement.createdAt ? new Date(movement.createdAt).toLocaleString("fr-FR") : "—"}</td><td className="p-3">{movement.articleTitle || movement.articleId}</td><td className="p-3 text-stone-500">{movement.reference || "—"}</td><td className="p-3 text-[#C4A77D]">{movement.type || "—"}</td><td className="p-3">{movement.quantity ?? "—"}</td><td className="p-3 text-stone-500">{movement.reason || "—"}</td></tr>)}</tbody></table></div> : <p className="text-sm text-stone-500">Aucun mouvement pour ces filtres.</p>}</section>}
 
         {activeTab === "returns" && <section className={`p-6 border space-y-5 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}><h2 className="font-serif text-2xl text-[#C4A77D]">Retours et remboursements</h2>{returnRequests.length ? <div className="space-y-3">{returnRequests.map((request: any) => <div key={request.id} className="flex flex-col gap-3 border border-stone-800 p-4 md:flex-row md:items-center md:justify-between"><div><p className="text-[#C4A77D]">Commande {request.orderId}</p><p className="text-sm">{request.clientName} · {Number(request.total || 0).toFixed(2)} €</p><p className="text-xs text-stone-500">{request.reason} · {request.createdAt ? new Date(request.createdAt).toLocaleString("fr-FR") : ""}</p></div><div className="flex flex-wrap gap-2"><span className="border border-stone-700 px-2 py-2 text-xs uppercase">{request.status}</span><button type="button" onClick={() => updateReturnStatus(request, "accepted")} className="border border-[#C4A77D] px-2 py-2 text-xs uppercase">Accepter</button><button type="button" onClick={() => updateReturnStatus(request, "refunded")} className="border border-green-600/60 px-2 py-2 text-xs uppercase text-green-400">Remboursé</button><button type="button" onClick={() => updateReturnStatus(request, "refused")} className="border border-red-500/60 px-2 py-2 text-xs uppercase text-red-400">Refuser</button></div></div>)}</div> : <p className="text-sm text-stone-500">Aucune demande de retour.</p>}</section>}
+
+        {activeTab === "contact" && <section className={`p-6 border space-y-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
+          <div><h2 className="font-serif text-2xl text-[#C4A77D]">Contact et e-mails</h2><p className="mt-2 text-sm text-stone-500">Les messages envoyés depuis le formulaire du site apparaissent ici. Les adresses ajoutées servent de destinataires pour les e-mails administratifs.</p></div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-4 border border-stone-800 p-4"><h3 className="text-[#C4A77D]">Adresses destinataires</h3><div className="flex gap-2"><input value={contactRecipientInput} onChange={e => setContactRecipientInput(e.target.value)} placeholder="adresse@example.com" className="min-w-0 flex-1 border border-stone-700 bg-black p-2 text-sm" /><button type="button" onClick={() => { if (contactRecipientInput.trim()) { saveContactRecipients([...contactRecipients, contactRecipientInput]); setContactRecipientInput(""); } }} className="bg-[#C4A77D] px-3 text-xs uppercase text-black">Ajouter</button></div>{contactRecipients.map(address => <div key={address} className="flex items-center justify-between border-b border-stone-800 py-2 text-sm"><span>{address}</span><button type="button" onClick={() => saveContactRecipients(contactRecipients.filter(item => item !== address))} className="text-red-400">Supprimer</button></div>)}<p className="text-xs text-stone-500">La réception de boîtes Gmail ou Outlook complètes nécessite ensuite une connexion IMAP/API. Ici, les messages du formulaire sont centralisés directement.</p></div>
+            <div className="space-y-4 border border-stone-800 p-4"><h3 className="text-[#C4A77D]">Envoyer un e-mail</h3><select value={contactTo} onChange={e => setContactTo(e.target.value)} className="w-full border border-stone-700 bg-black p-2 text-sm">{contactRecipients.map(address => <option key={address} value={address}>{address}</option>)}</select><input value={contactSubject} onChange={e => setContactSubject(e.target.value)} placeholder="Objet" className="w-full border border-stone-700 bg-black p-2 text-sm" /><textarea value={contactMessage} onChange={e => setContactMessage(e.target.value)} placeholder="Votre message" rows={7} className="w-full border border-stone-700 bg-black p-2 text-sm" /><button type="button" onClick={() => sendAdminContactEmail().catch(() => setContactStatus("Échec de l’envoi."))} className="bg-[#C4A77D] px-4 py-2 text-xs uppercase text-black">Envoyer avec le style LYJY</button>{contactStatus && <p className="text-sm text-[#C4A77D]">{contactStatus}</p>}</div>
+          </div>
+          <div className="border border-stone-800 p-4"><h3 className="mb-4 text-[#C4A77D]">Messages reçus via le site</h3>{contactMessages.length ? <div className="space-y-3">{contactMessages.map(message => <article key={message.id} className="border border-stone-800 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-medium">{message.firstName} {message.lastName} · <a className="text-[#C4A77D]" href={`mailto:${message.email}`}>{message.email}</a></p><span className="text-xs text-stone-500">{message.createdAt ? new Date(message.createdAt).toLocaleString("fr-FR") : ""}</span></div>{message.orderNumber && <p className="mt-1 text-xs text-stone-500">Commande : {message.orderNumber}</p>}<p className="mt-3 whitespace-pre-wrap text-sm">{message.message}</p>{message.status === "unread" && <button type="button" onClick={() => markContactMessageRead(message)} className="mt-3 border border-[#C4A77D] px-3 py-1 text-xs uppercase">Marquer comme lu</button>}</article>)}</div> : <p className="text-sm text-stone-500">Aucun message reçu pour le moment.</p>}</div>
+        </section>}
 
         {activeTab === "codes" && <section className={`p-6 border space-y-6 ${isDayMode ? "bg-white border-stone-200" : "bg-stone-950 border-stone-900"}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
