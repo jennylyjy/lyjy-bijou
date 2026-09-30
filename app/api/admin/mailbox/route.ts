@@ -1,0 +1,27 @@
+import { NextResponse } from "next/server";
+import { ImapFlow } from "imapflow";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
+
+const key = () => { if (!process.env.MAILBOX_ENCRYPTION_KEY) throw new Error("MAILBOX_ENCRYPTION_KEY manquante"); return createHash("sha256").update(process.env.MAILBOX_ENCRYPTION_KEY).digest(); };
+const encrypt = (value: string) => { const iv = randomBytes(12); const cipher = createCipheriv("aes-256-gcm", key(), iv); const data = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]); return `${iv.toString("base64")}.${cipher.getAuthTag().toString("base64")}.${data.toString("base64")}`; };
+const decrypt = (value: string) => { const [iv, tag, data] = value.split("."); const decipher = createDecipheriv("aes-256-gcm", key(), Buffer.from(iv, "base64")); decipher.setAuthTag(Buffer.from(tag, "base64")); return Buffer.concat([decipher.update(Buffer.from(data, "base64")), decipher.final()]).toString("utf8"); };
+const config = (email: string, password: string, host = "imap.mail.ovh.net", port = 993) => ({ host, port: Number(port), secure: true, auth: { user: email, pass: password }, logger: false as const });
+const authorized = async (request: Request) => { const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, ""); if (!token) return false; try { const user = await getAdminAuth().verifyIdToken(token); const allowed = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",").map(value => value.trim().toLowerCase()).filter(Boolean) || []; return !allowed.length || Boolean(user.email && allowed.includes(user.email.toLowerCase())); } catch { return false; } };
+
+export async function GET(request: Request) {
+  if (!await authorized(request)) return NextResponse.json({ error: "Accès non autorisé" }, { status: 401 });
+  const snapshot = await getAdminDb().collection("settings").doc("mailboxes").get();
+  const mailboxes = snapshot.exists ? (snapshot.data()?.mailboxes || []) : [];
+  return NextResponse.json({ mailboxes: mailboxes.map((mailbox: { id: string; email: string; host?: string; port?: number }) => ({ id: mailbox.id, email: mailbox.email, host: mailbox.host, port: mailbox.port })) });
+}
+
+export async function POST(request: Request) {
+  if (!await authorized(request)) return NextResponse.json({ error: "Accès non autorisé" }, { status: 401 });
+  const body = await request.json().catch(() => null);
+  if (!body?.action || !body.email) return NextResponse.json({ error: "Adresse e-mail obligatoire" }, { status: 400 });
+  if (body.action === "test") { const client = new ImapFlow(config(body.email, body.password || "", body.host, body.port)); try { await client.connect(); await client.logout(); return NextResponse.json({ ok: true }); } catch { try { await client.close(); } catch {} return NextResponse.json({ error: "Connexion OVH impossible" }, { status: 400 }); } }
+  if (body.action === "save") { if (!body.password) return NextResponse.json({ error: "Mot de passe obligatoire lors de l'ajout" }, { status: 400 }); const db = getAdminDb(); const ref = db.collection("settings").doc("mailboxes"); const snap = await ref.get(); const current = snap.exists ? (snap.data()?.mailboxes || []) : []; const mailbox = { id: body.email.toLowerCase(), email: body.email.toLowerCase(), host: body.host || "imap.mail.ovh.net", port: Number(body.port || 993), password: encrypt(body.password) }; await ref.set({ mailboxes: [...current.filter((item: { email: string }) => item.email !== mailbox.email), mailbox], updatedAt: new Date().toISOString() }); return NextResponse.json({ ok: true }); }
+  if (body.action === "messages") { const snap = await getAdminDb().collection("settings").doc("mailboxes").get(); const mailboxes = snap.exists ? (snap.data()?.mailboxes || []) : []; const messages: unknown[] = []; for (const mailbox of mailboxes) { const client = new ImapFlow(config(mailbox.email, decrypt(mailbox.password), mailbox.host, mailbox.port)); try { await client.connect(); const lock = await client.getMailboxLock("INBOX"); try { for await (const message of client.fetch({ seen: false }, { envelope: true, source: false })) messages.push({ id: `${mailbox.email}:${message.uid}`, mailbox: mailbox.email, subject: message.envelope?.subject || "(sans objet)", from: message.envelope?.from?.[0]?.address || "", date: message.envelope?.date || null }); } finally { lock.release(); } await client.logout(); } catch {} } return NextResponse.json({ messages }); }
+  return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
+}
