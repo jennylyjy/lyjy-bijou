@@ -1566,6 +1566,7 @@ function AdminPage() {
             <span>{isDayMode ? "Nuit" : "Jour"}</span>
           </button>
           <button onClick={() => setActiveTab("tutorial")} className={`pb-2 transition-colors ${activeTab === "tutorial" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Tutoriel</button>
+          <a href="/admin/tirage" className="pb-2 text-stone-500 transition-colors hover:text-[#C4A77D]">Tirage au sort</a>
 
           <button 
             onClick={handleLogout}
@@ -1653,6 +1654,7 @@ function AdminPage() {
             Articles ({articles.length})
           </button>
           <button onClick={() => setActiveTab("inventory")} className={`pb-2 transition-colors ${activeTab === "inventory" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}>Inventaire ({inventoryRows.length})</button>
+          <a href="/admin/tirage" className="pb-2 text-stone-500 transition-colors hover:text-[#C4A77D]">Tirage au sort</a>
           <button
             onClick={() => setActiveTab("advent")}
             className={`pb-2 transition-colors ${activeTab === "advent" ? "text-[#C4A77D] border-b-2 border-[#C4A77D]" : "text-stone-500 hover:text-stone-300"}`}
